@@ -1578,9 +1578,11 @@ Pairs with `lr-icon-button` (see `llms/components/lr-icon-button.md`).
 - `rotate: number = 0` (reflected once changed) — clockwise rotation in degrees, applied to the icon box. At zero
   there is no `transform` at all, so an ordinary icon never becomes a containing block; a
   non-finite value leaves the icon unrotated.
-- `flip?: 'x' | 'y' | 'both' | 'horizontal' | 'vertical'` (reflected, type `LyraIconFlip`) — mirrors
-  the icon about the vertical, horizontal, or both axes. `horizontal`/`vertical` are retained Lyra
-  aliases for the mirrored `x`/`y` vocabulary. Unset by default.
+- `flip?: 'x' | 'y' | 'both' | 'horizontal' | 'vertical' | 'rtl'` (reflected, type `LyraIconFlip`) —
+  mirrors the icon about the vertical, horizontal, or both axes. `horizontal`/`vertical` are retained
+  Lyra aliases for the mirrored `x`/`y` vocabulary. `rtl` is a direction-aware opt-in: it mirrors
+  about the vertical axis only while the icon's resolved direction (an inherited `dir` or its own) is
+  right-to-left, follows later direction changes live, and composes with `rotate`. Unset by default.
 - `canvas?: 'fixed' | 'auto' | 'square' | 'roomy'` (reflected, type `LyraIconCanvas`) — sizes the
   layout box. Unset behaves as `fixed` (1.25em × 1em); `auto` follows the SVG's intrinsic width at
   1em high; `square` is 1.25em × 1.25em; `roomy` is 1.5em × 1.5em. All scale with `font-size`.
@@ -1729,10 +1731,11 @@ Promise<string>`, `LyraIconLibraryMutator = (svg: SVGElement) => void`, and
   recoloring from poisoning another library, a direct `src`, or a later cache hit.
 - A superseded load can never paint over a newer one, and a detached icon holds no half-finished
   remote state. Reconnecting re-resolves the library and can reuse a retained sanitized resource.
-- `rotate`/`flip` are physical, not direction-relative: `flip="x"` produces the same
+- `rotate` and the axis flips are physical, not direction-relative: `flip="x"` produces the same
   mirrored artwork in LTR and RTL. A glyph that must follow reading direction is mirrored by the
-  wrapping part of the component that owns it; a second, direction-driven flip here would silently
-  cancel that one out.
+  wrapping part of the component that owns it; adding `flip="rtl"` to such a glyph would silently
+  cancel that mirror out. Use `flip="rtl"` for a directional icon you place yourself, such as
+  `<lr-button><lr-icon slot="start" name="chevron-left" flip="rtl"></lr-icon>Back</lr-button>`.
 
 ### Font Awesome preset
 

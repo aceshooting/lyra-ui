@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import '../../lr-icon.js';
+import '../../lr-button.js';
 import { registerIconLibrary } from './icon-library.js';
 
 const meta: Meta = { title: 'Icon', component: 'lr-icon', tags: ['autodocs'] };
@@ -123,6 +124,30 @@ export const RotateAndFlip: Story = {
       <lr-icon name="chevron-right" flip="x"></lr-icon>
       <lr-icon name="trash" flip="y"></lr-icon>
       <lr-icon name="trash" flip="both"></lr-icon>
+    </div>
+  `,
+};
+
+export const DirectionAwareFlip: Story = {
+  name: 'Direction-aware flip',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`flip="rtl"` mirrors a directional glyph on the x axis only while its resolved direction is right-to-left, and follows direction changes live. The physical `x`/`y`/`both` values mirror in every direction.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:grid;gap:1rem;font-size:1.5rem">
+      <div dir="ltr" style="display:flex;gap:1rem;align-items:center">
+        <lr-icon name="chevron-right" flip="rtl"></lr-icon>
+        <lr-button><lr-icon slot="start" name="chevron-left" flip="rtl"></lr-icon>Back</lr-button>
+      </div>
+      <div dir="rtl" style="display:flex;gap:1rem;align-items:center">
+        <lr-icon name="chevron-right" flip="rtl"></lr-icon>
+        <lr-button><lr-icon slot="start" name="chevron-left" flip="rtl"></lr-icon>Back</lr-button>
+      </div>
     </div>
   `,
 };

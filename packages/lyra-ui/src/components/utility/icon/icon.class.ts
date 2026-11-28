@@ -58,8 +58,9 @@ type IconFetchState =
   | { kind: 'empty' }
   | { kind: 'error'; reason: IconErrorReason };
 
-/** Mirroring direction for `flip`. Physical, not direction-relative — see `icon.styles.ts`. */
-export type LyraIconFlip = 'x' | 'y' | 'both' | 'horizontal' | 'vertical';
+/** Mirroring direction for `flip`. The axis values are physical; `rtl` mirrors on the x axis only
+ *  while the icon's resolved direction is right-to-left — see `icon.styles.ts`. */
+export type LyraIconFlip = 'x' | 'y' | 'both' | 'horizontal' | 'vertical' | 'rtl';
 
 /** Sizing strategy for the icon's layout canvas. */
 export type LyraIconCanvas = 'fixed' | 'auto' | 'square' | 'roomy';
@@ -119,7 +120,8 @@ export interface LyraIconEventMap {
  *   `--lr-theme-icon-stroke-width` hook once instead.
  * @cssprop [--lr-icon-rotate=0deg] - Rotation applied to the box. Written inline from the `rotate`
  *   property, so set that rather than this property.
- * @cssprop [--lr-icon-flip-x=1] - Horizontal scale factor, set to `-1` by `flip`.
+ * @cssprop [--lr-icon-flip-x=1] - Horizontal scale factor, set to `-1` by `flip` (by `flip="rtl"`
+ *   only under a right-to-left direction).
  * @cssprop [--lr-icon-flip-y=1] - Vertical scale factor, set to `-1` by `flip`.
  * @cssprop [--animation-delay=0s] - Delay before an icon animation starts.
  * @cssprop [--animation-direction=normal] - Playback direction for icon animations.
@@ -216,7 +218,11 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
   /** Rotation in degrees, clockwise in both text directions. The zero default does not reflect and
    *  produces no `transform`, so an ordinary icon never becomes a containing block. */
   @property({ converter: blankNumberConverter(0), reflect: true, useDefault: true }) rotate = 0;
-  /** Mirrors the icon about the vertical (`x`/`horizontal`), horizontal (`y`/`vertical`), or both axes. */
+  /** Mirrors the icon about the vertical (`x`/`horizontal`), horizontal (`y`/`vertical`), or both
+   *  axes in every direction. `rtl` mirrors about the vertical axis only while the icon's resolved
+   *  direction (inherited `dir` or its own) is right-to-left, and follows later direction changes
+   *  live; it composes with `rotate`. Unset by default: no mirroring. Do not combine `rtl` with a
+   *  component that already mirrors its own directional glyph part, or the two mirrors cancel. */
   @property({ reflect: true }) flip?: LyraIconFlip;
   /** Layout canvas. Unset/`fixed` is 1.25em × 1em; `auto` follows intrinsic width at 1em high;
    *  `square` is 1.25em × 1.25em; `roomy` is 1.5em × 1.5em. */

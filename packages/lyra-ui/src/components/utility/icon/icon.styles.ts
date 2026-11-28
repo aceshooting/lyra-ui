@@ -53,8 +53,9 @@ export const styles = css`
     block-size: var(--lr-icon-size, var(--lr-size-1-5em));
   }
 
-  /* Rotate and flip are deliberately physical, not direction-relative. Directional glyphs are
-     mirrored by the wrapping part of the component that owns their reading-order semantics. */
+  /* Rotate and the axis flips are deliberately physical, not direction-relative. Directional
+     glyphs are mirrored by the wrapping part of the component that owns their reading-order
+     semantics; the opt-in rtl value below mirrors a standalone icon by its own resolved direction. */
   :host(:where([rotate], [flip])) {
     transform: rotate(var(--lr-icon-rotate, 0deg))
       scale(
@@ -74,6 +75,10 @@ export const styles = css`
   :host(:where([flip="both"])) {
     --_lr-icon-flip-x: -1;
     --_lr-icon-flip-y: -1;
+  }
+
+  :host(:where([flip="rtl"]:dir(rtl))) {
+    --_lr-icon-flip-x: -1;
   }
 
   .fa-primary {
