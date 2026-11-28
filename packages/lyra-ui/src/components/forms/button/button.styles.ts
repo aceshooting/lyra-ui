@@ -159,7 +159,8 @@ export const styles = css`
     position: relative;
     box-sizing: border-box;
     inline-size: var(--lr-button-width, var(--_lr-button-width));
-    min-inline-size: 0;
+    /* Opt-in floor (equal-width Cancel/Save pairs); unset it stays 0, as before. */
+    min-inline-size: var(--lr-button-min-inline-size, 0);
     max-inline-size: 100%;
     /* --lr-button-height is deliberately UNDECLARED on :host, so both var()s below take their
        fallback arm: a floor at the tier's --lr-button-min-height and an auto height. Setting it

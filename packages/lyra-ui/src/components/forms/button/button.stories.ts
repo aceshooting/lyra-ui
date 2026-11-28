@@ -708,3 +708,12 @@ export const RegularWeightPlainButton: Story = {
     </lr-button>
   `,
 };
+
+export const EqualWidthActions: Story = {
+  render: () => html`
+    <div style="display: flex; gap: 0.5rem; --lr-button-min-inline-size: 8rem;">
+      <lr-button>Cancel</lr-button>
+      <lr-button appearance="accent">Save changes</lr-button>
+    </div>
+  `,
+};

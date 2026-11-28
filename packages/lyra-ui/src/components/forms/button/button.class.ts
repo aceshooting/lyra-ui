@@ -274,6 +274,9 @@ export interface LyraButtonEventMap {
  * before. Set it (e.g. to pin the button to a fixed toolbar row) to both floor *and* cap the
  * height. Never declare it as `auto`: a declared value wins over the `var()` fallback arm and would
  * make every tier's floor dead code. `appearance="link"` ignores it.
+ * @cssprop [--lr-button-min-inline-size=0] - Minimum inline size of the internal button, which
+ * grows the host with it (for example `8rem` so a short "Cancel" and a longer "Save" end equal
+ * width). Unset, the button keeps no inline floor.
  * @cssprop [--lr-button-gap=var(--lr-form-control-gap)] - Gap between the icon/label and any
  * slotted content in the internal button. Constant across the ladder's tiers. Override it to retune
  * without a `::part(base)` rule.

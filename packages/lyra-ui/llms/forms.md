@@ -2841,6 +2841,9 @@ own width; override it to `auto` for a compact inline composition. `appearance="
 its text by default but honours an explicitly set `--lr-button-width`, so a full-width link-look
 row is `style="inline-size: 100%; --lr-button-width: 100%"` on the host.
 
+`--lr-button-min-inline-size` (default `0`) floors the internal button's inline size and grows the
+host with it, so a short "Cancel" and a longer "Save" can share one width (for example `8rem`).
+
 `--lr-button-line-height` (default `inherit`) sets the internal button's line height in every
 appearance. For `appearance="link"`, `--lr-button-link-text-decoration` (default `underline`) is the
 resting decoration and `--lr-button-link-hover-text-decoration` (default `underline`) the enabled
