@@ -96,7 +96,8 @@
   ],
   "scripts": {
     "build": "node scripts/build.mjs",
-    "prepack": "pnpm build",
+    "prepack": "pnpm build && node ../lyra-ui/scripts/packed-manifest.mjs strip",
+    "postpack": "node ../lyra-ui/scripts/packed-manifest.mjs restore",
     "lint": "node scripts/check-package.mjs && tsc --noEmit -p tsconfig.test.json && tsc --noEmit -p tsconfig.scene-native-peer.test.json",
     "test": "node --disable-warning=ExperimentalWarning --test test/*.test.mjs",
     "test:browser": "node scripts/browser-test.mjs",

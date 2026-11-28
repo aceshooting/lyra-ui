@@ -895,6 +895,21 @@ type and LLM freshness are enforced inside `pnpm lint`. Whenever you touch the p
 attributes, parts, CSS properties), run `pnpm regen` and commit the whole set; one generator alone
 leaves downstream outputs stale.
 
+### Published manifest
+
+Every published package's `prepack` ends with `packed-manifest.mjs strip` and its `postpack` is
+`packed-manifest.mjs restore` (`packages/lyra-ui/scripts/packed-manifest.mjs`). pnpm re-reads
+`package.json` after `prepack`, so the archive carries it without `scripts`, `devDependencies`,
+`packageManager`, `devEngines` or `pnpm`; the original bytes wait under
+`node_modules/.cache/lyra-packed-manifest/` and come back on `postpack`. `pnpm pack --dry-run` and a
+failed pack skip `postpack`, so `strip` also leaves a detached guard that restores the checkout once
+the packing pnpm exits; a later `strip` recovers a kept original too. A pack with
+`--config.ignore-scripts=true` (CI's companion archives) skips both and keeps the full manifest:
+only real-prepack archives are published. `release-integrity.mjs validate-tarball` (release pack
+and tagged rebuild) and `check-package-size.mjs --tarball` (lyra-ui) reject a manifest that still
+carries those fields or lost or changed any other source field. A new package wires both hooks
+(`test:package-size` checks every `packages/*/package.json`).
+
 ## Repository hygiene checks
 
 Seven root scripts cover what the package gates cannot see: workflow security, spelling, links, shell

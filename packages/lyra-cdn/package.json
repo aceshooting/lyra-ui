@@ -62,7 +62,8 @@
   ],
   "scripts": {
     "build": "node scripts/build.mjs",
-    "prepack": "pnpm --filter @aceshooting/lyra-ui build && pnpm --filter @aceshooting/lyra-map --filter @aceshooting/lyra-3d --filter @aceshooting/lyra-gen --filter @aceshooting/lyra-docs build && node scripts/build.mjs",
+    "prepack": "pnpm --filter @aceshooting/lyra-ui build && pnpm --filter @aceshooting/lyra-map --filter @aceshooting/lyra-3d --filter @aceshooting/lyra-gen --filter @aceshooting/lyra-docs build && node scripts/build.mjs && node ../lyra-ui/scripts/packed-manifest.mjs strip",
+    "postpack": "node ../lyra-ui/scripts/packed-manifest.mjs restore",
     "test": "node scripts/smoke.mjs"
   },
   "devDependencies": {

@@ -54,7 +54,8 @@
   ],
   "scripts": {
     "assemble": "node scripts/build.mjs",
-    "prepack": "pnpm --filter @aceshooting/lyra-ui build && pnpm assemble",
+    "prepack": "pnpm --filter @aceshooting/lyra-ui build && pnpm assemble && node ../lyra-ui/scripts/packed-manifest.mjs strip",
+    "postpack": "node ../lyra-ui/scripts/packed-manifest.mjs restore",
     "lint": "node scripts/check-package.mjs",
     "test": "node --test scripts/package.test.mjs scripts/check-package.test.mjs scripts/coverage.test.mjs",
     "test:coverage": "node scripts/coverage.mjs"

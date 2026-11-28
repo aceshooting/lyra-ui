@@ -252,6 +252,26 @@ test('retains the exact archive measurement when the archive exceeds its file ce
   }
 });
 
+test('an archive gate rejects a manifest that still carries contributor-only fields', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lyra-package-size-manifest-'));
+  try {
+    const tarball = join(directory, 'package.tgz');
+    const run = () => spawnSync(process.execPath, ['check-package-size.mjs', '--tarball', tarball], {
+      cwd: new URL('.', import.meta.url), encoding: 'utf8',
+    });
+    writeFileSync(tarball, archiveFixture(expectedPackage));
+    const leaked = run();
+    assert.equal(leaked.status, 1);
+    assert.match(leaked.stderr, /contributor-only 'scripts'/u);
+    assert.match(leaked.stderr, /contributor-only 'devDependencies'/u);
+    const { scripts: _scripts, devDependencies: _dev, packageManager: _pm, ...published } = expectedPackage;
+    writeFileSync(tarball, archiveFixture(published));
+    assert.doesNotMatch(run().stderr, /contributor-only|lacks required|dropped consumer field|differs from the source/u);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test('rejects malformed tarball inputs and mismatched package identity without repacking', async () => {
   assert.deepEqual(parsePackageSizeArguments([]), {});
   assert.deepEqual(parsePackageSizeArguments(['--tarball', 'archive.tgz']), { tarball: 'archive.tgz' });

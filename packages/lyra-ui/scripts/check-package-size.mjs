@@ -6,6 +6,7 @@ import { spawnSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { REQUIRED_GEN_FILES } from '../../../scripts/packed-gen-consumer.mjs';
+import { packedManifestFindings } from './packed-manifest.mjs';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const budgetsPath = join(packageDir, 'scripts', 'package-budgets.json');
@@ -391,6 +392,12 @@ export async function readTarballMetrics(
   };
 }
 
+function readArchiveManifest(tarball) {
+  const extracted = spawnSync('tar', ['-xOf', resolve(tarball), 'package/package.json'], { encoding: 'utf8', maxBuffer: 1024 * 1024 });
+  if (extracted.status !== 0) throw new Error(`Could not read package/package.json from ${tarball}: ${extracted.stderr}`);
+  return JSON.parse(extracted.stdout);
+}
+
 function reportMeasurement({ name, version }, { measurement, packedBytes, unpackedBytes, fileCount, sha256 }) {
   console.log(`Package size measurement: ${JSON.stringify({
     name, version, measurement, packedBytes, unpackedBytes, fileCount, sha256,
@@ -424,6 +431,8 @@ async function main() {
   reportMeasurement(manifest, metrics);
   if (metrics.sha256) console.log(`Package archive SHA-256: ${metrics.sha256}`);
   const findings = packageBudgetFindings(metrics, budgets);
+  // A real pack runs prepack, whose last step strips the contributor-only manifest fields.
+  if (options.tarball) findings.push(...packedManifestFindings(readArchiveManifest(options.tarball), manifest));
   const summary = formatPackageSummary(metrics, budgets);
   if (findings.length > 0) {
     console.error(`${summary}\n${findings.join('\n')}`);

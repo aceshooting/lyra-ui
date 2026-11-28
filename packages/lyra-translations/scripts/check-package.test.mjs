@@ -77,6 +77,8 @@ const manifestViolations = [
   ['a CommonJS package type', ({ manifest }) => { manifest.type = 'commonjs'; }, /commonjs/u],
   ['a non-MIT license', ({ manifest }) => { manifest.license = 'GPL-3.0'; }, /GPL-3\.0/u],
   ['a prepack that skips the lyra-ui build', ({ manifest }) => { manifest.scripts.prepack = 'pnpm assemble'; }, /pnpm assemble/u],
+  ['a prepack that publishes the contributor scripts', ({ manifest }) => { manifest.scripts.prepack = 'pnpm --filter @aceshooting/lyra-ui build && pnpm assemble'; }, /packed-manifest\.mjs strip/u],
+  ['a pack that never restores the contributor manifest', ({ manifest }) => { delete manifest.scripts.postpack; }, /omits scripts/u],
   ['a build script that would assemble before lyra-ui is built', ({ manifest }) => { manifest.scripts.build = 'node scripts/build.mjs'; }, /stays out of recursive builds/u],
   ['a private package', ({ manifest }) => { manifest.private = true; }, /must be publishable/u],
   ['an older Node floor', ({ manifest }) => { manifest.engines.node = '>=18'; }, />=18/u],

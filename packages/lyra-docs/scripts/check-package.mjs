@@ -40,7 +40,8 @@ assert(existsSync(path.join(packageRoot, editorSourceTwin)), `Missing ${editorSo
 assert.deepEqual(manifest.sideEffects, [editorEntry, editorSourceTwin, manifest.exports['./docx/editor.css']]);
 assert.deepEqual(manifest.publishConfig, { access: 'public' });
 assert.equal(manifest.repository.directory, 'packages/lyra-docs');
-assert.equal(manifest.scripts.prepack, 'pnpm --filter @aceshooting/lyra-ui build && pnpm build');
+assert.equal(manifest.scripts.prepack, 'pnpm --filter @aceshooting/lyra-ui build && pnpm build && node ../lyra-ui/scripts/packed-manifest.mjs strip');
+assert.equal(manifest.scripts.postpack, 'node ../lyra-ui/scripts/packed-manifest.mjs restore', 'the published manifest omits scripts and the checkout gets them back');
 assert.deepEqual(manifest.exports, {
   '.': { types: './dist/index.d.ts', default: './dist/index.js' },
   './custom-elements.json': './custom-elements.json',

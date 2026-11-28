@@ -33,6 +33,7 @@ import {
   planReleaseTags,
   selectReleaseTarball,
   validateAnnotatedTag,
+  validatePublishedManifest,
   validateRebuiltTarballBytes,
   validateTarballIdentity,
   validateWorkflowSource,
@@ -2095,6 +2096,20 @@ test('initial document release selects its existing version without releasing an
   assert.throws(() => validateTarballIdentity({ ...docs, version: '0.1.1' }, plan[0]), /does not match tag version/u);
   assert.throws(() => validateTarballIdentity({ ...docs, name: '@aceshooting/lyra-ui' }, plan[0]), /does not match tag package/u);
   assert.throws(() => planReleaseTags({ packages, existingTags: ['lyra-docs@0.1.0'], selection: 'lyra-docs' }), /already exists/u);
+});
+
+test('every release tarball manifest must be the published manifest of its tagged package', () => {
+  for (const directory of readdirSync(path.join(repoRoot, 'packages'))) {
+    const file = path.join(repoRoot, 'packages', directory, 'package.json');
+    if (!existsSync(file)) continue;
+    const source = JSON.parse(readFileSync(file, 'utf8'));
+    const { scripts, devDependencies, packageManager, ...published } = source;
+    assert.ok(scripts && devDependencies && packageManager, `${directory} declares contributor-only fields`);
+    assert.equal(validatePublishedManifest(published, source), published);
+    assert.throws(() => validatePublishedManifest(source, source), /contributor-only 'scripts'/u, directory);
+    const { exports: _exports, ...withoutExports } = published;
+    assert.throws(() => validatePublishedManifest(withoutExports, source), /lacks required 'exports'/u, directory);
+  }
 });
 
 test('initial generated-UI release selects its existing independent version only', () => {

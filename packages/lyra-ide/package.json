@@ -54,7 +54,8 @@
   ],
   "scripts": {
     "sync": "node scripts/sync.mjs",
-    "prepack": "node scripts/sync.mjs",
+    "prepack": "node scripts/sync.mjs && node ../lyra-ui/scripts/packed-manifest.mjs strip",
+    "postpack": "node ../lyra-ui/scripts/packed-manifest.mjs restore",
     "lint": "node scripts/check-package.mjs",
     "test": "node --test scripts/package.test.mjs scripts/check-package.test.mjs scripts/coverage.test.mjs",
     "test:coverage": "node scripts/coverage.mjs"

@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { collectReleaseAssets, verifyReleaseAssets } from './release-artifacts.mjs';
 
 import { isMainModule } from '../packages/lyra-ui/scripts/is-main-module.mjs';
+import { packedManifestFindings } from '../packages/lyra-ui/scripts/packed-manifest.mjs';
 
 const repoRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const qualificationManifest = JSON.parse(
@@ -449,6 +450,15 @@ export function validateTarballIdentity(packageJson, expected) {
   return { name: packageJson.name, version: packageJson.version };
 }
 
+/** The packed manifest omits contributor-only fields and keeps every consumer field of the source. */
+export function validatePublishedManifest(packageJson, sourceManifest) {
+  const findings = packedManifestFindings(packageJson, sourceManifest);
+  if (findings.length > 0) {
+    throw new Error(`The release tarball manifest is not the published manifest:\n${findings.join('\n')}`);
+  }
+  return packageJson;
+}
+
 export function validateRebuiltTarballBytes(releaseBytes, rebuiltBytes) {
   if (!Buffer.isBuffer(releaseBytes) || !Buffer.isBuffer(rebuiltBytes)) {
     throw new Error('Tarball byte comparison requires two Buffer values.');
@@ -691,7 +701,12 @@ function validateTarballCli(options) {
     encoding: 'utf8',
     maxBuffer: 1024 * 1024,
   });
-  const identity = validateTarballIdentity(JSON.parse(packageText), expected);
+  const packageJson = JSON.parse(packageText);
+  const identity = validateTarballIdentity(packageJson, expected);
+  validatePublishedManifest(
+    packageJson,
+    JSON.parse(readFileSync(path.join(repoRoot, expected.directory, 'package.json'), 'utf8')),
+  );
   const outputFile = options.github_output;
   if (outputFile) appendFileSync(outputFile, `path=${tarball}\n`);
   console.log(
