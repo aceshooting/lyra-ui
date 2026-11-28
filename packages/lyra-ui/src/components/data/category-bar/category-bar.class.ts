@@ -20,6 +20,9 @@ import { LYRA_DEFAULT_chart, LYRA_DEFAULT_noData } from '../../../internal/defau
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
+/** Caller-owned display text for a value on the scale (scale labels, marker, description). */
+export type LyraCategoryBarValueFormatter = (value: number) => string;
+
 /** Categorical chart colors available before the palette repeats. */
 const PALETTE_SIZE = 8;
 
@@ -44,7 +47,9 @@ interface ResolvedRange {
  * The host's content is a labeled group whose text is read by assistive technology: with a
  * `marker` it names the value and the range it falls in ("Marker at 62, in range 40 to 70"),
  * otherwise it lists every range. The drawing, the marker and the optional boundary labels
- * (`withLabels`) are decorative (`aria-hidden`). Numbers are formatted for the effective locale.
+ * (`withLabels`) are decorative (`aria-hidden`). Numbers are formatted for the effective locale
+ * unless a host-only `valueFormatter` is supplied; a formatter that throws or returns a
+ * non-string falls back to the locale format for that value.
  *
  * `values` and `variants` are owned collections: each assignment is detached into a frozen
  * snapshot, so later caller mutation has no effect until a new array is assigned.
@@ -98,6 +103,10 @@ export class LyraCategoryBar extends LyraElement {
   /** Shows each range's start value, and the scale's end, under the bar. */
   @property({ type: Boolean, reflect: true, attribute: 'with-labels' }) withLabels = false;
 
+  /** Optional display formatter for scale labels, the marker value and the accessible
+   *  description. Host-only (no attribute); unset uses the locale's number format. */
+  @property({ attribute: false }) valueFormatter?: LyraCategoryBarValueFormatter;
+
   private resolveRanges(): ResolvedRange[] {
     const values: unknown = this.values;
     if (!Array.isArray(values)) return [];
@@ -123,6 +132,15 @@ export class LyraCategoryBar extends LyraElement {
   }
 
   private formatValue(value: number): string {
+    const formatter = this.valueFormatter;
+    if (typeof formatter === 'function') {
+      try {
+        const formatted: unknown = formatter(value);
+        if (typeof formatted === 'string') return formatted;
+      } catch {
+        // A failing caller formatter falls back to the locale format for this value.
+      }
+    }
     return this.formatLocaleNumber(value, { maximumFractionDigits: chartValueFractionDigits(value) });
   }
 

@@ -141,4 +141,42 @@ describe('<lr-category-bar>', () => {
       await setReducedMotion('no-preference');
     }
   });
+
+  describe('valueFormatter', () => {
+    const hm = (hours: number): string => `${Math.floor(hours)}:${String(Math.round((hours % 1) * 60)).padStart(2, '0')}`;
+
+    it('formats scale labels and the accessible description, and unset keeps the locale format', async () => {
+      const el = await fixture<LyraCategoryBar>(
+        html`<lr-category-bar marker="10.5667" with-labels .values=${[8, 4]}></lr-category-bar>`,
+      );
+      const before = el.shadowRoot!.innerHTML;
+      const plainDescription = text(part(el, 'description'));
+      el.valueFormatter = hm;
+      await el.updateComplete;
+      expect(parts(el, 'range-label').map(text)).to.deep.equal(['0:00', '8:00', '12:00']);
+      expect(text(part(el, 'description'))).to.contain('10:34');
+      expect(text(part(el, 'description'))).to.not.equal(plainDescription);
+      el.valueFormatter = undefined;
+      await el.updateComplete;
+      expect(el.shadowRoot!.innerHTML).to.equal(before);
+    });
+
+    it('formats the range list description when there is no marker', async () => {
+      const el = await fixture<LyraCategoryBar>(html`<lr-category-bar .values=${[8, 4]} .valueFormatter=${hm}></lr-category-bar>`);
+      expect(text(part(el, 'description'))).to.contain('8:00').and.to.contain('12:00');
+    });
+
+    it('falls back to the locale format when the formatter throws or returns a non-string', async () => {
+      const el = await fixture<LyraCategoryBar>(html`<lr-category-bar with-labels .values=${[10, 20]}></lr-category-bar>`);
+      const expected = parts(el, 'range-label').map(text);
+      el.valueFormatter = () => {
+        throw new Error('boom');
+      };
+      await el.updateComplete;
+      expect(parts(el, 'range-label').map(text)).to.deep.equal(expected);
+      el.valueFormatter = (() => 5) as unknown as (value: number) => string;
+      await el.updateComplete;
+      expect(parts(el, 'range-label').map(text)).to.deep.equal(expected);
+    });
+  });
 });

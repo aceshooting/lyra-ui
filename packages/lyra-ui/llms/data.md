@@ -7054,6 +7054,9 @@ locale. `values` and `variants` are owned collections. When no range has a posit
 - `marker?: number` (attribute `marker`; unset or non-finite draws no marker)
 - `label: string = ''` (accessible name of the group)
 - `withLabels: boolean = false` (attribute `with-labels`, reflected)
+- `valueFormatter?: (value: number) => string` (property only; formats scale labels, the marker value
+  and the accessible description, e.g. hours as `8:00`; a formatter that throws or returns a
+  non-string falls back to the locale number format; unset keeps the locale format)
 
 **Events:** none.
 

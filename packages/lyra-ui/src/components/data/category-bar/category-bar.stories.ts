@@ -42,3 +42,16 @@ export const RightToLeft: StoryObj = {
     <lr-category-bar label="Credit score" marker="72" with-labels .values=${[40, 30, 30]} .variants=${['danger', 'warning', 'success']}></lr-category-bar>
   </div>`,
 };
+
+/** A host-only `valueFormatter` supplies caller-owned text: hours shown as h:mm. */
+export const CustomValueFormatter: StoryObj = {
+  render: () => html`<lr-category-bar
+    label="Shift length"
+    marker="10.5667"
+    with-labels
+    .values=${[8, 2, 2]}
+    .variants=${['success', 'warning', 'danger']}
+    .valueFormatter=${(hours: number) => `${Math.floor(hours)}:${String(Math.round((hours % 1) * 60)).padStart(2, '0')}`}
+    style="max-inline-size: 28rem"
+  ></lr-category-bar>`,
+};
