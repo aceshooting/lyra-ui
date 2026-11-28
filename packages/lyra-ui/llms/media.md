@@ -3319,6 +3319,11 @@ reimplemented.
 - `withoutRejectionList: boolean = false` (reflected, attribute `without-rejection-list`) — omits
   the visible `[part="rejection"]` list, for an application that renders its own banner from the
   `lr-files` detail. The assertive announcement and the `rejected` detail are unchanged.
+- `withoutAnnouncements: boolean = false` (reflected, attribute `without-announcements`) —
+  suppresses both drop-outcome announcements (the polite accepted/rejected summary and the
+  assertive rejection reasons), for an application that validates further and announces the
+  outcome itself. The `lr-files` detail is identical, the visible list still follows
+  `without-rejection-list`, and the drag instruction is still announced.
 - `target: Element | null = null` (property only) — the same, with an element reference; takes
   precedence over `for` while it is connected.
 - `readonly dragging: boolean` — `true` during an active drag session. Assignment is ignored, so a framework binding that spreads every property cannot throw.
@@ -3326,7 +3331,8 @@ reimplemented.
   instructional text; identical contract and scale to `lr-file-input`'s own `size`, so a drop-zone
   can match a neighboring small-tier `lr-file-input` in the same dense layout.
 
-Every completed selection announces its outcome, including consecutive selections of the same count.
+Every completed selection announces its outcome (unless `without-announcements`), including
+consecutive selections of the same count.
 The `fileInputAcceptedOne` / `fileInputAcceptedMany` and `fileInputRejectedOne` / `fileInputRejectedMany`
 messages accept localized plural forms selected with the numeric count.
 

@@ -137,6 +137,12 @@ export const WithoutRejectionList: Story = {
   </lr-drop-zone><output id="without-list-log"></output>`,
 };
 
+export const WithoutAnnouncements: Story = {
+  render: () => html`<lr-drop-zone without-announcements accept=".csv" @lr-files=${logFiles('without-announcements-log')}>
+    <p>Drop files: the zone stays silent so the application can announce the outcome itself.</p>
+  </lr-drop-zone><output id="without-announcements-log"></output>`,
+};
+
 export const NarrowRTL: Story = {
   name: 'Narrow 320px (LTR and RTL)',
   parameters: {

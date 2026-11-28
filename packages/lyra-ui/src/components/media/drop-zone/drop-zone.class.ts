@@ -224,8 +224,14 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
    *  behavior as `for`; property only. */
   @property({ attribute: false }) target: Element | null = null;
   /** Omits the visible `[part="rejection"]` list for an application that renders its own banner
-   *  from the `lr-files` detail. The assertive announcement and the `rejected` detail are kept. */
+   *  from the `lr-files` detail. The assertive announcement (unless `without-announcements`) and the
+   *  `rejected` detail are kept. */
   @property({ type: Boolean, reflect: true, attribute: 'without-rejection-list' }) withoutRejectionList = false;
+  /** Suppresses both drop-outcome announcements -- the polite accepted/rejected summary and the
+   *  assertive rejection reasons -- for an application that validates further and announces the
+   *  outcome itself. Defaults to `false`. The `lr-files` detail is unchanged, the visible rejection
+   *  list still follows `without-rejection-list`, and the drag instruction is still announced. */
+  @property({ type: Boolean, reflect: true, attribute: 'without-announcements' }) withoutAnnouncements = false;
 
   @query('[part="overlay"]') private overlayEl?: HTMLElement;
   /** The element the drag listeners are currently attached to, if any. */
@@ -412,8 +418,10 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
     const { rejected } = detail;
     this.rejectedFiles = rejected;
     this.resultStatus = selectionMessage(detail, this.effectiveLocale, this.intakeMessage, this.acceptedMessage, this.rejectedMessage);
-    if (this.resultStatus) this.announcements.announcePolite(this.resultStatus);
-    if (rejected.length > 0) this.announcements.announceAssertive(rejectionMessages(rejected, this.effectiveLocale, this.intakeMessage).join(' '));
+    if (!this.withoutAnnouncements) {
+      if (this.resultStatus) this.announcements.announcePolite(this.resultStatus);
+      if (rejected.length > 0) this.announcements.announceAssertive(rejectionMessages(rejected, this.effectiveLocale, this.intakeMessage).join(' '));
+    }
     this.emit('lr-files', detail);
   }
 

@@ -167,6 +167,82 @@ it('without-rejection-list omits the visible list but keeps the announcement and
   expect(el.shadowRoot!.querySelectorAll('[part="rejection"]').length).to.equal(1);
 });
 
+/** Drops onto a separate, unflagged zone and waits for its polite and assertive announcements, so
+ *  any announcement the flagged zone queued earlier has had the same chance to land. */
+async function flushAnnouncementsWithControl(marker: string): Promise<void> {
+  const control = await fixture<LyraDropZone>(html`<lr-drop-zone accept=".png" multiple accepted-message=${`${marker} accepted`}><div>control</div></lr-drop-zone>`);
+  dropWith(base(control), [makeFile(`${marker}.png`, 'image/png'), makeFile(`${marker}-skip.txt`)]);
+  await waitUntil(() => sinkTexts('polite').some((text) => text.includes(`${marker} accepted`)), 'the control polite announcement lands');
+  await waitUntil(() => sinkTexts('assertive').some((text) => text.includes(`${marker}-skip.txt`)), 'the control assertive announcement lands');
+}
+
+for (const [label, files] of [
+  ['accepted', ['quiet-ok-a.png']],
+  ['rejected', ['quiet-bad-r.txt']],
+  ['mixed', ['quiet-ok-m.png', 'quiet-bad-m.txt']],
+] as const) {
+  it(`without-announcements suppresses both outcome announcements for a ${label} drop and keeps the detail`, async () => {
+    const droppedFiles = files.map((name) => makeFile(name, name.endsWith('.png') ? 'image/png' : 'text/plain'));
+    const plain = await fixture<LyraDropZone>(html`<lr-drop-zone accept=".png" multiple><div>plain</div></lr-drop-zone>`);
+    const plainResult = oneEvent(plain, 'lr-files');
+    dropWith(base(plain), droppedFiles);
+    const expected = (await plainResult).detail as LyraDropZoneFilesDetail;
+    // The unflagged baseline announces these same file names; count from after it lands.
+    await flushAnnouncementsWithControl(`base-${label}`);
+    const assertiveBefore = sinkTexts('assertive').filter((text) => text.includes('quiet-bad-')).length;
+
+    const el = await fixture<LyraDropZone>(html`
+      <lr-drop-zone without-announcements accept=".png" multiple accepted-message="quiet {count} accepted" rejected-message="quiet {count} rejected">
+        <div>region</div>
+      </lr-drop-zone>
+    `);
+    expect(el.withoutAnnouncements).to.equal(true);
+    const result = oneEvent(el, 'lr-files');
+    dropWith(base(el), droppedFiles);
+    const detail = (await result).detail as LyraDropZoneFilesDetail;
+    expect(detail.files.map((f) => f.name)).to.deep.equal(expected.files.map((f) => f.name));
+    expect(detail.rejected.map((r) => [r.file.name, r.reason])).to.deep.equal(expected.rejected.map((r) => [r.file.name, r.reason]));
+    expect(detail.remainingFiles).to.equal(expected.remainingFiles);
+    expect(detail.remainingTotalSize).to.equal(expected.remainingTotalSize);
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="rejection"]').length, 'the visible list still follows without-rejection-list')
+      .to.equal(detail.rejected.length > 0 ? 1 : 0);
+
+    await flushAnnouncementsWithControl(`ctl-${label}`);
+    expect(sinkTexts('polite').filter((text) => text.includes('quiet ')).length, 'no polite outcome announcement').to.equal(0);
+    expect(sinkTexts('assertive').filter((text) => text.includes('quiet-bad-')).length, 'no assertive outcome announcement').to.equal(assertiveBefore);
+  });
+}
+
+it('without-announcements keeps the drag instruction announcement', async () => {
+  const el = await fixture<LyraDropZone>(html`
+    <lr-drop-zone without-announcements accept=".png" .strings=${{ dropzoneReleaseToAdd: 'Quiet zone: release to add.' }}>
+      <div>region</div>
+    </lr-drop-zone>
+  `);
+  dragEnterWith(base(el), [makeFile('drag.png', 'image/png')]);
+  await waitUntil(() => sinkTexts('polite').includes('Quiet zone: release to add.'), 'the drag instruction is announced');
+});
+
+it('without-announcements unset still announces both outcomes, and clearing the flag restores them', async () => {
+  const el = await fixture<LyraDropZone>(html`
+    <lr-drop-zone accept=".png" multiple accepted-message="loud {count} accepted"><div>region</div></lr-drop-zone>
+  `);
+  expect(el.withoutAnnouncements).to.equal(false);
+  expect(el.hasAttribute('without-announcements')).to.equal(false);
+  dropWith(base(el), [makeFile('loud-ok.png', 'image/png'), makeFile('loud-bad.txt')]);
+  await waitUntil(() => sinkTexts('polite').some((text) => text.includes('loud 1 accepted')), 'the polite outcome is announced');
+  await waitUntil(() => sinkTexts('assertive').some((text) => text.includes('loud-bad.txt')), 'the assertive outcome is announced');
+
+  el.withoutAnnouncements = true;
+  await el.updateComplete;
+  expect(el.hasAttribute('without-announcements')).to.equal(true);
+  el.withoutAnnouncements = false;
+  await el.updateComplete;
+  dropWith(base(el), [makeFile('loud-again.txt')]);
+  await waitUntil(() => sinkTexts('assertive').some((text) => text.includes('loud-again.txt')), 'clearing the flag restores announcements');
+});
+
 it('rejects a file beyond max-total-size', async () => {
   const el = await fixture<LyraDropZone>(html`<lr-drop-zone multiple max-total-size="100"><div>region</div></lr-drop-zone>`);
   const result = oneEvent(el, 'lr-files');
