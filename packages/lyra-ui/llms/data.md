@@ -5879,7 +5879,16 @@ These named interfaces and helper signatures are available to typed integrations
     readonly date: string | number | Date;
     readonly title: string;
     readonly color?: string;
+    readonly textColor?: string;
     readonly data?: unknown;
+  }`
+  Import: `@aceshooting/lyra-ui/components/data/calendar/calendar.class.js`.
+  `LyraCalendarDayContext {
+    readonly date: string;
+    readonly outside: boolean;
+    readonly today: boolean;
+    readonly selected: boolean;
+    readonly events: readonly CalendarEvent[];
   }`
 
 - **`components-data-condition-builder-condition-builder-contracts`** — Supporting data types and helpers for this component family.

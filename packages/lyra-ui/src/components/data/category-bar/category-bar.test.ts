@@ -16,6 +16,20 @@ function text(node: Element | null | undefined): string {
   return (node?.textContent ?? '').replace(/[  \s]+/g, ' ').trim();
 }
 
+/** Every rendered element's tag, attributes (style via its CSSOM serialization, which does not
+ *  depend on whether the declaration arrived as attribute text or a property write) and leaf text,
+ *  so two renders compare without Lit's per-render marker comments. */
+function renderProjection(el: LyraCategoryBar): string[] {
+  return [...el.shadowRoot!.querySelectorAll<HTMLElement>('*')]
+    .filter((node) => node.localName !== 'style')
+    .map((node) => {
+      const attributes = [...node.attributes]
+        .map((attribute) => (attribute.name === 'style' ? `style=${node.style.cssText}` : `${attribute.name}=${attribute.value}`))
+        .sort();
+      return `${node.localName}[${attributes.join('|')}]${node.childElementCount === 0 ? text(node) : ''}`;
+    });
+}
+
 expectLocaleFallback('de-DE', ['chart', 'categoryBarMarker']);
 
 describe('<lr-category-bar>', () => {
@@ -149,7 +163,7 @@ describe('<lr-category-bar>', () => {
       const el = await fixture<LyraCategoryBar>(
         html`<lr-category-bar marker="10.5667" with-labels .values=${[8, 4]}></lr-category-bar>`,
       );
-      const before = el.shadowRoot!.innerHTML;
+      const before = renderProjection(el);
       const plainDescription = text(part(el, 'description'));
       el.valueFormatter = hm;
       await el.updateComplete;
@@ -158,7 +172,7 @@ describe('<lr-category-bar>', () => {
       expect(text(part(el, 'description'))).to.not.equal(plainDescription);
       el.valueFormatter = undefined;
       await el.updateComplete;
-      expect(el.shadowRoot!.innerHTML).to.equal(before);
+      expect(renderProjection(el)).to.deep.equal(before);
     });
 
     it('formats the range list description when there is no marker', async () => {

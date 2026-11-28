@@ -155,7 +155,7 @@ describe('lr-calendar dayContent', () => {
     const cell = el.shadowRoot!.querySelector('[data-date="2026-07-15"]') as HTMLElement;
     const content = cell.querySelector('[part="day-content"]') as HTMLElement;
     expect(content.textContent!.trim()).to.equal('$120');
-    expect(cell.querySelector('[part="date"]')!.nextElementSibling).to.equal(content);
+    expect(cell.querySelector('[part="date"]')!.nextElementSibling === content).to.equal(true);
     expect(cell.getAttribute('aria-label')).to.equal(
       new Intl.DateTimeFormat('en-US', { dateStyle: 'full' }).format(new Date(2026, 6, 15)),
     );

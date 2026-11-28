@@ -2518,6 +2518,8 @@ These named interfaces and helper signatures are available to typed integrations
   Import: `@aceshooting/lyra-ui/components/utility/export-button/csv.js`.
   `LyraBuildCsvOptions {
     readonly bom?: boolean;
+    readonly delimiter?: string;
+    readonly lineEnding?: string;
   }`
   Import: `@aceshooting/lyra-ui/components/utility/export-button/csv.js`.
   `LyraCsvColumn {

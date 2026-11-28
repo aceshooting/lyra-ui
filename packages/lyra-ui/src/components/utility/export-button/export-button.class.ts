@@ -23,6 +23,7 @@ import { nextId } from '../../../internal/a11y.js';
 import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { buildCsv, downloadBlob, type LyraCsvColumn } from '../../../internal/csv.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './export-button.styles.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import {
@@ -860,7 +861,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     if (d === ';' || d === '\t') return d;
     if (d !== 'auto') return ',';
     try {
-      const decimal = new Intl.NumberFormat(this.effectiveLocale).formatToParts(1.1).find((p) => p.type === 'decimal');
+      const decimal = getNumberFormat(this.effectiveLocale).formatToParts(1.1).find((p) => p.type === 'decimal');
       return decimal?.value === ',' ? ';' : ',';
     } catch {
       return ',';
