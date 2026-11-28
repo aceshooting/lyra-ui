@@ -441,6 +441,7 @@ export type {
   TableSortRequestDetail,
   TableRowAttributes,
   TableRowAttributeValue,
+  TableGroupFooter,
   TableStackHeader,
   TableStackMode,
 } from './components/data/table/table.class.js';
@@ -486,9 +487,11 @@ export type { GaugeShape, LyraGaugeThreshold } from './components/data/gauge/gau
 export type { LyraFunnelStage } from './components/data/funnel/funnel.class.js';
 export type {
   LyraExportButtonAppearance,
+  LyraExportDelimiter,
   LyraExportFormat,
   LyraExportFormatDescriptor,
   LyraExportFormatOption,
+  LyraExportLineEnding,
 } from './components/utility/export-button/export-button.class.js';
 export {
   escapeCsvField,
@@ -1583,6 +1586,8 @@ export type {
 export type {
   CalendarEvent,
   CalendarView,
+  LyraCalendarDayContent,
+  LyraCalendarDayContext,
   LyraCalendarEventMap,
   LyraCalendarFirstDayOfWeek,
 } from './components/data/calendar/calendar.class.js';
