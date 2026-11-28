@@ -4,7 +4,7 @@
   "$reviewedGzipBytes": {
     "$componentMaxGzipKb": 322000,
     "$componentP95GzipKb": 153922,
-    "dist/all.js": 1623935,
+    "dist/all.js": 1625557,
     "dist/autoloader-cdn.js": 1869922,
     "dist/autoloader.js": 1869706,
     "dist/components/agent-tools/index.js": 537808,
@@ -42,7 +42,7 @@
   "dist/ssr/all.js": 1847.875,
   "dist/localization.js": 27.875,
   "dist/lyra.js": 152.625,
-  "dist/all.js": 1585.875,
+  "dist/all.js": 1587.5,
   "dist/components/agent-tools/index.js": 525.25,
   "dist/components/charts/index.js": 139.25,
   "dist/components/conversation/index.js": 474.125,

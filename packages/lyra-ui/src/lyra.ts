@@ -485,6 +485,7 @@ export type {
 } from './components/data/data-grid/data-grid.class.js';
 export type { GaugeShape, LyraGaugeThreshold } from './components/data/gauge/gauge.class.js';
 export type { LyraFunnelStage } from './components/data/funnel/funnel.class.js';
+export type { LyraCategoryBarValueFormatter } from './components/data/category-bar/category-bar.class.js';
 export type {
   LyraExportButtonAppearance,
   LyraExportDelimiter,
