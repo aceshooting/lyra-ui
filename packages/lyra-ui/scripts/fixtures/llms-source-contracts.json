@@ -4923,7 +4923,7 @@
       "module": "src/components/data/calendar/calendar.class.ts",
       "exportName": "CalendarEvent",
       "kind": "interface",
-      "fingerprint": "e98005de80d650bc270d",
+      "fingerprint": "21d4b7568d4da356dfa3",
       "routes": [
         "src/all.ts",
         "src/components/data/calendar/calendar.class.ts",
@@ -12346,7 +12346,7 @@
       "module": "src/internal/csv.ts",
       "exportName": "buildCsv",
       "kind": "function",
-      "fingerprint": "1e8c4f2033e539e2ba8c",
+      "fingerprint": "b62b83a90e2efc42a007",
       "routes": [
         "src/all.ts",
         "src/components/utility/export-button/csv.ts",
@@ -12403,7 +12403,7 @@
       "module": "src/internal/csv.ts",
       "exportName": "LyraBuildCsvOptions",
       "kind": "interface",
-      "fingerprint": "d4ccd65b38500bfacae2",
+      "fingerprint": "c9d29e1dd963d9e842b0",
       "routes": [
         "src/components/utility/export-button/csv.ts"
       ],
@@ -14573,7 +14573,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "6c17c0f33b53759c7f66",
+      "fingerprint": "55cbe2c0666819cfa76b",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -16255,7 +16255,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "f22b806a6f1bdf8e9c34",
+      "fingerprint": "5bddbfa2dde38deadbd7",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16271,7 +16271,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "be8ef8d9526956f761b8",
+      "fingerprint": "eddf1f1a8f9c0a19e5c8",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16287,7 +16287,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "8734f10812b797561a59",
+      "fingerprint": "7521327ab7da9bf55058",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -16831,7 +16831,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "22459a67a048c4b02bd6",
+      "fingerprint": "4b3cfbbe7b11ca28ccb5",
       "routes": [
         "src/vue.ts"
       ],
@@ -17223,7 +17223,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "906715a2cdd6d9d50cec",
+      "fingerprint": "f17493db8b5904476b7a",
       "routes": [
         "src/framework-types.ts"
       ],
@@ -23540,6 +23540,27 @@
         "kind": "utility",
         "name": "components-conversation-code-block-code-grammar-registry-contracts",
         "declaration": "unregisterCodeGrammar"
+      }
+    },
+    {
+      "module": "src/components/data/calendar/calendar.class.ts",
+      "exportName": "LyraCalendarDayContext",
+      "kind": "interface",
+      "fingerprint": "d32d1910d5c656c1ded6",
+      "routes": [
+        "src/all.ts",
+        "src/components/data/calendar/calendar.class.ts",
+        "src/components/data/index.ts",
+        "src/components/lr-calendar.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/data.md",
+      "family": "data",
+      "locator": {
+        "kind": "utility",
+        "name": "components-data-calendar-calendar-contracts",
+        "declaration": "LyraCalendarDayContext"
       }
     }
   ],
