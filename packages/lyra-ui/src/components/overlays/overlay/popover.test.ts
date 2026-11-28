@@ -348,7 +348,7 @@ it('rolls back a virtual anchor when opening is vetoed', async () => {
   const returnFocusTo = document.createElement('button');
   const seam = el as unknown as {
     virtualAnchor?: unknown;
-    returnFocusTo?: HTMLElement;
+    callReturnFocusTo?: HTMLElement;
   };
   el.addEventListener('lr-show', (event) => event.preventDefault(), { once: true });
 
@@ -357,7 +357,7 @@ it('rolls back a virtual anchor when opening is vetoed', async () => {
 
   expect(el.open).to.equal(false);
   expect(seam.virtualAnchor === undefined).to.equal(true);
-  expect(seam.returnFocusTo === undefined).to.equal(true);
+  expect(seam.callReturnFocusTo === undefined).to.equal(true);
 });
 
 it('closes an already-rendered open popover immediately when disabled is set afterward', async () => {

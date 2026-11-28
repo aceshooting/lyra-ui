@@ -46,8 +46,10 @@ import {
 import {
   activateNonmodalOverlay,
   composedContains,
+  type NonmodalOverlayActivationOptions,
   type OverlayHandle,
 } from '../../../internal/nonmodal-overlay-manager.js';
+import { isComposedFocusAvailable } from '../../../internal/focus-navigation.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { animateRegistered } from '../../../internal/registered-animation.js';
@@ -253,11 +255,13 @@ export interface LyraPopoverEventMap {
  * @event lr-hide - The popover is about to close, for every dismissal path (Escape, light
  *   dismiss, `hide()`, `open = false`). Cancelable — `preventDefault()` keeps it open.
  * @event lr-after-hide - The popover is closed and its transition has finished.
- * @method show - `show(): Promise<void>` — programmatically open and resolve after
- *   `lr-after-show`.
+ * @method show - `show(options?: { returnFocusTo?: HTMLElement | null }): Promise<void>` —
+ *   programmatically open and resolve after `lr-after-show`. `options.returnFocusTo` sets where
+ *   Escape, light dismiss and `hide()` return focus for this opening only, without writing ARIA on
+ *   that element; it wins over the `returnFocusTo` property and is cleared on close.
  * @method hide - `hide(options?: { focusTrigger?: boolean }): Promise<void>` — programmatically
- *   close and resolve after `lr-after-hide`. Focus returns to the slotted/`for` interaction owner
- *   by default, matching Escape, light dismiss, and `el.open = false`; pass
+ *   close and resolve after `lr-after-hide`. Focus returns to an explicit `returnFocusTo`, else the
+ *   slotted/`for` interaction owner, matching Escape, light dismiss, and `el.open = false`; pass
  *   `focusTrigger: false` to preserve the current focus instead.
  * @csspart trigger - The trigger wrapper.
  * @csspart hover-bridge - The invisible quad bridging the trigger and the popup, rendered only
@@ -446,6 +450,18 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
    * @default null
    */
   @property({ attribute: false }) interactionBoundary: Element | null = null;
+  /**
+   * Persistent focus-return target for Escape, light dismiss and `hide()`, for a popover opened by
+   * code next to an element that is not its interaction owner (for example `anchor` plus
+   * `trigger="manual"`), where focus would otherwise fall to the document body. It replaces the
+   * slotted/`for` owner as the target and also applies to `showAt()`; it writes no ARIA on the
+   * element. A per-call `show()`/`showAt()` `options.returnFocusTo` wins over it for that opening.
+   * A target that is disconnected, disabled, inert or otherwise unfocusable at close falls back to
+   * the default target. `hide({ focusTrigger: false })` still skips focus return. Persists across
+   * close and reconnect.
+   * @default null
+   */
+  @property({ attribute: false }) returnFocusTo: HTMLElement | null = null;
   /** Suppresses the arrow that points at the anchor, wherever it would otherwise render. */
   @property({ type: Boolean, attribute: 'without-arrow', reflect: true }) withoutArrow = false;
   /** Where the arrow sits along the popup's edge. `anchor` tracks the anchor's centre. */
@@ -612,9 +628,10 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
    *  set. Cleared whenever the popover closes, so a later `open = true` with no fresh `showAt()`
    *  call reverts to plain trigger-based behavior. */
   private virtualAnchor?: VirtualAnchor;
-  /** `options.returnFocusTo` from the `showAt()` call that opened the popover, if any -- see
-   *  `showAt()`'s doc comment and `activatePopoverOverlay()`'s focus-return configuration. */
-  private returnFocusTo?: HTMLElement;
+  /** The per-call `options.returnFocusTo` from the `show()` or `showAt()` call that opened (or
+   *  last re-targeted) the popover, if any. Wins over the `returnFocusTo` property and is cleared
+   *  whenever the popover closes -- see `restoreFocusTarget()`. */
+  private callReturnFocusTo?: HTMLElement;
   /** Explicit light-dismiss containment for the current virtual anchor, without trigger ownership. */
   private virtualInteractionBoundary?: Element;
   private cleanup?: DeferredOperationHandle;
@@ -815,6 +832,9 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     }
     if (changed.has('for') || changed.has('forElement')) this.syncInteractionTrigger();
     else if (changed.has('trigger')) this.syncTriggerA11y();
+    if (changed.has('returnFocusTo') && !changed.has('open') && this.overlayHandle?.isActive()) {
+      this.overlayHandle.updateRestoreFocusTo(this.restoreFocusTarget());
+    }
     if (
       this.directionChanged ||
       changed.has('open') ||
@@ -862,7 +882,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
           }
           this.overlayHandle = undefined;
           this.virtualAnchor = undefined;
-          this.returnFocusTo = undefined;
+          this.callReturnFocusTo = undefined;
           this.virtualInteractionBoundary = undefined;
           this.syncInteractionTrigger();
         }
@@ -1040,23 +1060,44 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     }
   }
   /** Registers every open popover with the shared, topmost-stack-aware overlay manager. Popovers
-   *  remain nonmodal and non-focus-trapping; the manager owns Escape and restoration to the
-   *  trigger (or a virtual anchor's explicit `returnFocusTo`). */
+   *  remain nonmodal and non-focus-trapping; the manager owns Escape and restoration to
+   *  `restoreFocusTarget()`. */
   private activatePopoverOverlay(): void {
     if (!this.isConnected || this.overlayHandle?.isActive()) return;
     this.overlayHandle = activateNonmodalOverlay({
       host: this,
       panel: () => this.renderRoot.querySelector('[part~="popup"]') as HTMLElement | null,
       onEscape: () => void this.hide(),
-      restoreFocusTo: this.virtualAnchor ? (this.returnFocusTo ?? null) : this.accessibleTrigger,
+      restoreFocusTo: this.restoreFocusTarget(),
     });
+  }
+
+  /**
+   * The focus-return target handed to the overlay manager. Precedence: the per-call
+   * `options.returnFocusTo` of `show()`/`showAt()`, then the `returnFocusTo` property, then the
+   * default -- the semantic interaction owner for DOM anchors, nothing for a virtual anchor. With
+   * no explicit target the default is passed through unchanged. An explicit target is resolved
+   * at close: one that is disconnected, in another document, disabled, inert or otherwise not
+   * focusable falls back to that default, so focus lands where it would have without it.
+   */
+  private restoreFocusTarget(): NonNullable<NonmodalOverlayActivationOptions['restoreFocusTo']> | null {
+    const virtual = this.virtualAnchor !== undefined;
+    const fallback = (): HTMLElement | null => (virtual ? null : this.accessibleTrigger);
+    const explicit = this.callReturnFocusTo ?? this.returnFocusTo ?? undefined;
+    if (!explicit) return fallback();
+    return () => {
+      const target = explicit.isConnected && explicit.ownerDocument === this.ownerDocument
+        ? resolveOverlayAccessibleTrigger(explicit)
+        : null;
+      return target && isComposedFocusAvailable(target) ? target : fallback();
+    };
   }
 
   /** Updates the eventual focus-return target without changing this popover's overlay-stack
    *  identity. Re-registering would promote an underlying popover above a newer overlay and, when
    *  this popover is already topmost, briefly move focus into the overlay underneath. */
   private updatePopoverRestoreFocusTarget(): void {
-    const target = this.virtualAnchor ? (this.returnFocusTo ?? null) : this.accessibleTrigger;
+    const target = this.restoreFocusTarget();
     if (this.overlayHandle?.isActive()) {
       this.overlayHandle.updateRestoreFocusTo(target);
       return;
@@ -1083,7 +1124,8 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
    * Only elements in this popover's document qualify. Each call replaces the boundary; omitting
    * it clears the previous one. Closing or disconnecting also clears it.
    * A virtual anchor also has no `.focus()`. Escape, light dismiss, and programmatic close return
-   * focus to `options.returnFocusTo` when supplied, or skip focus-return entirely otherwise --
+   * focus to `options.returnFocusTo` when supplied, else to the `returnFocusTo` property when set,
+   * or skip focus-return entirely otherwise --
    * refocusing the right place after a virtual anchor closes is the host's responsibility, since
    * Lyra can't assume how e.g. a graph node's own keyboard model wants focus back.
    * Non-finite coordinates or dimensions are ignored and leave the current open/anchor state
@@ -1096,7 +1138,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     const normalizedRect = normalizeVirtualRect(rect);
     if (!normalizedRect) return;
     const previousAnchor = this.virtualAnchor;
-    const previousReturnFocusTo = this.returnFocusTo;
+    const previousReturnFocusTo = this.callReturnFocusTo;
     const previousInteractionBoundary = this.virtualInteractionBoundary;
     const bounds = new DOMRect(
       normalizedRect.x,
@@ -1108,7 +1150,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
       getBoundingClientRect: () => bounds,
       contextElement: normalizedRect.contextElement,
     };
-    this.returnFocusTo = options?.returnFocusTo;
+    this.callReturnFocusTo = options?.returnFocusTo ?? undefined;
     this.virtualInteractionBoundary = options?.interactionBoundary;
     this.syncInteractionTrigger();
     if (this.open) {
@@ -1119,7 +1161,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     void this.show();
     if (this.open) return;
     this.virtualAnchor = previousAnchor;
-    this.returnFocusTo = previousReturnFocusTo;
+    this.callReturnFocusTo = previousReturnFocusTo;
     this.virtualInteractionBoundary = previousInteractionBoundary;
     this.syncInteractionTrigger();
   }
@@ -1261,7 +1303,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
       this.accessibleTriggerAria = acquireAriaOwnership(semanticTrigger, contribution);
     }
     if (this.overlayHandle?.isActive() && !this.virtualAnchor) {
-      this.overlayHandle.updateRestoreFocusTo(accessibleTrigger);
+      this.overlayHandle.updateRestoreFocusTo(this.restoreFocusTarget());
     }
   }
 
@@ -1562,15 +1604,37 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   }
 
   /** Open the popover. Emits `lr-show` first — vetoing it leaves the popover closed — and
-   *  `lr-after-show` once the popup's transition has finished. */
-  show(): Promise<void> {
+   *  `lr-after-show` once the popup's transition has finished.
+   *
+   *  `options.returnFocusTo` names where Escape, light dismiss and `hide()` return focus for this
+   *  opening only -- for a popover opened by code next to an element (`anchor` plus
+   *  `trigger="manual"`) that has no interaction owner. It writes no ARIA on that element, wins
+   *  over the `returnFocusTo` property and is forgotten once the popover closes, so a later bare
+   *  `show()` falls back to the property or the default. Passed while already open, it re-targets
+   *  the pending close. Omitted or `null`, nothing changes. */
+  show(options?: { returnFocusTo?: HTMLElement | null }): Promise<void> {
+    const returnFocusTo = options?.returnFocusTo ?? undefined;
     if (!this.canOpen) return Promise.resolve();
-    return this.disclosure.show(() => !this.closePopoverPeers());
+    if (this.open) {
+      if (returnFocusTo) {
+        this.callReturnFocusTo = returnFocusTo;
+        this.updatePopoverRestoreFocusTarget();
+      }
+      return Promise.resolve();
+    }
+    if (!returnFocusTo) return this.disclosure.show(() => !this.closePopoverPeers());
+    const previous = this.callReturnFocusTo;
+    this.callReturnFocusTo = returnFocusTo;
+    const opening = this.disclosure.show(() => !this.closePopoverPeers());
+    if (!this.open) this.callReturnFocusTo = previous;
+    return opening;
   }
 
   /** Programmatically close the popover and return focus to its trigger by default, matching
    *  Escape, light dismiss, and a bare `el.open = false`. Pass `{ focusTrigger: false }` to opt
-   *  out and leave focus where it is. Virtual anchors restore their explicit `returnFocusTo`.
+   *  out and leave focus where it is. An explicit `returnFocusTo` (per-call `show()`/`showAt()`
+   *  option, then the property) replaces the trigger as the target; virtual anchors without one
+   *  return focus nowhere.
    *  Emits `lr-hide` first — vetoing it leaves the popover open — then `lr-after-hide`. */
   hide(options?: { focusTrigger?: boolean }): Promise<void> {
     return this.disclosure.hide(() => this.prepareClose(options));
@@ -1638,7 +1702,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     this.positionedAnchor = undefined;
     this.anchorPositioned = false;
     this.popupHidden = true;
-    this.returnFocusTo = undefined;
+    this.callReturnFocusTo = undefined;
     this.setOpen(false);
     this.syncOpenAttribute();
   }

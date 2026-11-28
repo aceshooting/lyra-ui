@@ -1823,6 +1823,17 @@ If the import fails, leave the native disclosure visible and usable.
   collection lives inside a closed shadow tree, supply its exposed host. Unset, existing dismissal
   behavior is unchanged. Virtual `showAt()` anchors use only their independent per-call
   `options.interactionBoundary`.
+- `returnFocusTo: HTMLElement | null = null` (property only) — persistent focus-return target for
+  Escape, light dismiss and `hide()`, for a popover opened by code next to an element that is not
+  its interaction owner (`.anchor` plus `trigger="manual"`), where focus would otherwise fall to
+  the page. It writes no `aria-haspopup`/`aria-expanded`/`aria-controls` on the element (unlike
+  `for`/`forElement`), so it is safe to point at another component's trigger, such as an
+  `lr-dropdown` trigger carrying `aria-haspopup="menu"`. It replaces the slotted/`for` owner as the
+  target and also applies to `showAt()`. Precedence: a per-call `show()`/`showAt()`
+  `options.returnFocusTo`, then this property, then the default target. A target that is
+  disconnected, disabled, inert or otherwise unfocusable at close falls back to the default;
+  `hide({ focusTrigger: false })` still skips focus return. Persists across close and reconnect.
+  Unset, focus return is unchanged.
 - `withoutArrow: boolean = false` (attribute `without-arrow`, reflected) — suppresses the arrow
   that otherwise points at the anchor.
 - `arrowPlacement: 'anchor'|'start'|'end'|'center' = 'anchor'` (attribute `arrow-placement`) —
@@ -1892,14 +1903,26 @@ when ownership moves or disconnects.
 An enabled, non-inert light-DOM descendant with `data-popover="close"` requests its closest owning
 popover to close when activated. Disabled/`aria-disabled` actions are inert, and a nested popover
 consumes its own action so the same click never closes an ancestor.
-**Methods:** `show(): Promise<void>` opens the popover programmatically — identical to
-`el.open = true`, including the veto point — and resolves after `lr-after-show`. A no-op or vetoed
-transition returns an already-resolved promise.
+**Methods:** `show(options?: { returnFocusTo?: HTMLElement | null }): Promise<void>` opens the
+popover programmatically — identical to `el.open = true`, including the veto point — and resolves
+after `lr-after-show`. A no-op or vetoed transition returns an already-resolved promise.
+`options.returnFocusTo` is the per-call form of the `returnFocusTo` property: it wins over the
+property for this opening only, is cleared on close (a later bare `show()` falls back to the
+property or the default) and, passed while already open, re-targets the pending close. Omitted or
+`null`, nothing changes.
+
+```js
+popover.anchor = rowButton;          // positioning only
+popover.trigger = 'manual';
+await popover.show({ returnFocusTo: rowButton }); // Escape/light dismiss/hide() refocus rowButton
+```
+
 `showAt(rect: { x, y, width?, height?, contextElement? }, options?: { returnFocusTo?:
 HTMLElement; interactionBoundary?: Element })` opens the popover anchored to an arbitrary rectangle instead of any DOM anchor —
 for a graph node, a canvas pixel, a chart datum, or any other non-DOM location
 (`width`/`height` default to `0`, a point). Escape and light-dismiss return focus to
-`options.returnFocusTo` when supplied, or skip focus-return entirely otherwise, since a virtual
+`options.returnFocusTo` when supplied, else to the `returnFocusTo` property when set, or skip
+focus-return entirely otherwise, since a virtual
 anchor has no `.focus()`. The virtual anchor has no DOM node of its own for `autoUpdate()` to
 track ancestor scroll/resize against — pass `rect.contextElement` (a real, still-connected element
 near the virtual point) when one is available to give it something to observe; otherwise, or when
@@ -1918,9 +1941,9 @@ no-ops, including for the boundary.
 `hide(options?: { focusTrigger?: boolean }): Promise<void>` programmatically closes the popover and
 resolves after `lr-after-hide`; pass
 `{ focusTrigger: false }` to opt out of focus restoration. By default, `hide()`, Escape, light
-dismiss, and a bare `el.open = false` all return focus to the slotted/`for` owner's real composed
-focus target, or to a virtual anchor's explicit `returnFocusTo`; a virtual anchor with no return
-target closes without moving focus. No-op when already closed.
+dismiss, and a bare `el.open = false` all return focus to an explicit `returnFocusTo` (per-call
+option, then property), else to the slotted/`for` owner's real composed focus target; a virtual
+anchor or bare `.anchor` with no return target closes without moving focus. No-op when already closed.
 **Events:** `lr-show` (cancelable), `lr-after-show`, `lr-hide` (cancelable), `lr-after-hide` — none
 carries a detail, and the two `lr-after-*` events are never cancelable. Neither pair fires for
 markup that renders open from the start, nor when only `placement`/`distance` change on an

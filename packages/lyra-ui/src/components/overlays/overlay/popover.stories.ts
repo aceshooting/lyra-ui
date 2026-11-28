@@ -222,6 +222,33 @@ export const DomInteractionBoundary: Story = {
   `,
 };
 
+function onReturnFocusOpen(event: MouseEvent): void {
+  const button = event.currentTarget as HTMLButtonElement;
+  const popover = button.parentElement!.querySelector<LyraPopover>('lr-popover')!;
+  popover.anchor = button;
+  void popover.show({ returnFocusTo: button });
+}
+
+export const ReturnFocusTo: Story = {
+  name: 'Focus return for a code-opened popover',
+  parameters: {
+    docs: {
+      description: {
+        story: 'A popover opened by code next to an element (`.anchor` plus `trigger="manual"`) has no interaction owner, so focus would fall to the page on close. `show({ returnFocusTo })` returns focus to the given element on Escape, light dismiss and `hide()` for that opening only, without writing `aria-haspopup`, `aria-expanded` or `aria-controls` on it. The `returnFocusTo` property is the persistent form; a per-call option wins over it.',
+      },
+    },
+  },
+  render: () => html`
+    <div>
+      <button type="button" @click=${onReturnFocusOpen}>Show details</button>
+      <lr-popover trigger="manual" placement="bottom">
+        <p>Press Escape: focus returns to the button.</p>
+        <button type="button" data-popover="close">Close</button>
+      </lr-popover>
+    </div>
+  `,
+};
+
 export const DisclosureNavigation: Story = {
   name: 'Disclosure navigation (popup-role="none")',
   parameters: {
