@@ -1306,8 +1306,8 @@ Application and OS reduced motion still take precedence; persist Shine independe
 See the composition guide for the controlled picker and preference wiring.
 
 The four separate topbar controls—gemstone, mode, design, language—stay square `2.75rem` targets
-(44px at a 16px root), with localized names and tooltips. Use gemstone, sun/moon and horizontal-slider
-icons, and a country flag for language. Dense gemstone options do not reduce
+(44px at a 16px root), with localized names and tooltips. Use the built-in `gem`, `sun`/`moon` (`monitor` for System) and `sliders-horizontal`
+`<lr-icon>` glyphs, and a country flag for language. Dense gemstone options do not reduce
 those launcher targets. Size icon launchers through their tokens and keep their glyphs bounded:
 
 ```css
@@ -1321,8 +1321,10 @@ square of that size; a `::part(button)` size rule adds nothing. `--lr-icon-size`
 `appearance-launcher` to each `lr-icon-button`, including buttons slotted through a popover.
 Keep the mode action separate from the design fields. Set the locale picker's
 `--lr-locale-picker-trigger-height: 2.75rem`; its flag-only trigger is then a square of that height,
-so it needs no `::part(trigger)` rule either. Use that public flag-only trigger with readable menu
-entries:
+so it needs no `::part(trigger)` rule either. Set `appearance="plain"` on it so its rest, hover,
+press and focus ring match the plain icon buttons beside it, giving the four launchers one resting
+look; the default `outlined` trigger would be the only bordered one. Use that public flag-only
+trigger with readable menu entries:
 
 ```ts
 import '@aceshooting/lyra-ui/components/lr-locale-picker.js';
@@ -1330,7 +1332,7 @@ import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';
 ```
 
 ```html
-<lr-locale-picker top-layer trigger-display="flag" option-display="label"
+<lr-locale-picker top-layer appearance="plain" trigger-display="flag" option-display="label"
   aria-label="Localized language action"></lr-locale-picker>
 ```
 
@@ -3771,6 +3773,13 @@ installing or shipping a wrapper; import the normal granular registration entry 
   onto every element it manages, its dev builds add `ng-reflect-*` input reflections and
   `ng-version`, and Vue's scoped styles add `data-v-*` — none of these trigger the unknown-attribute
   warning. A genuinely misspelled or unsupported attribute still warns.
+- **Desktop shells on a custom scheme.** Every component that loads a `src`/`image` or fetches a
+  remote resource accepts relative URLs plus `http:`, `https:`, `blob:` and `data:`. A page served
+  from its own scheme (for example a privileged `app://host/`, where bundler asset URLs become
+  `app://host/assets/x.svg`) may also use absolute URLs on exactly its own origin — same scheme,
+  host and port as `location`, and only when that origin is not opaque (`null`). Another host,
+  port or scheme is still refused, links and downloads keep their narrower allowlists, and
+  `javascript:`, `vbscript:`, `file:` and `about:` never qualify, even as the page's own scheme.
 
 All three adapters use the generated `LyraComponentTypeMap` from
 `@aceshooting/lyra-ui/framework-types`. Its per-tag entries contain the element type, writable

@@ -8592,6 +8592,7 @@ export interface LyraComponentTypeMap {
     element: LyraLocalePicker;
     properties: LyraElementProperties<
       LyraLocalePicker,
+      | 'appearance'
       | 'autocapitalize'
       | 'autocomplete'
       | 'autocorrect'

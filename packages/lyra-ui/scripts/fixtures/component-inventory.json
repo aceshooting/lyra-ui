@@ -91937,6 +91937,16 @@
       "surface": {
         "attributes": [
           {
+            "name": "appearance",
+            "property": "appearance",
+            "type": "LyraAppearance",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "outlined"
+          },
+          {
             "name": "autocapitalize",
             "property": "autocapitalize",
             "type": "string",
@@ -92183,6 +92193,16 @@
           }
         ],
         "properties": [
+          {
+            "name": "appearance",
+            "attribute": "appearance",
+            "type": "LyraAppearance",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "outlined"
+          },
           {
             "name": "autocapitalize",
             "attribute": "autocapitalize",

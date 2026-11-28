@@ -33704,6 +33704,12 @@
               "state": "open"
             },
             {
+              "file": "src/components/forms/locale-picker/locale-picker-appearance.test.ts",
+              "test": "passes axe with a plain flag-only trigger",
+              "target": "picker",
+              "state": "populated"
+            },
+            {
               "file": "src/components/forms/locale-picker/locale-picker-empty-catalog-boundaries.test.ts",
               "test": "keeps an authoritative empty catalog uncommitted through open-menu navigation and Enter",
               "target": "el",
@@ -33870,7 +33876,7 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.class.ts",
-              "line": 1035,
+              "line": 1047,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -33906,6 +33912,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/locale-picker/locale-picker-appearance.test.ts",
           "src/components/forms/locale-picker/locale-picker-closed-layout.test.ts",
           "src/components/forms/locale-picker/locale-picker-empty-catalog-boundaries.test.ts",
           "src/components/forms/locale-picker/locale-picker-lazy-names.test.ts",
