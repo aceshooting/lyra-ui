@@ -286,7 +286,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-stream-status"></a>`lr-stream-status` | conversation | `import '@aceshooting/lyra-ui/components/lr-stream-status.js';` | none | `lr-button`, `lr-live-region` | none | 47.2 KiB |
 | <a id="lr-streaming-text"></a>`lr-streaming-text` | conversation | `import '@aceshooting/lyra-ui/components/lr-streaming-text.js';` | `dompurify`, `katex`, `marked`, `shiki` | `lr-markdown` | none | 80.1 KiB |
 | <a id="lr-streaming-text-core"></a>`lr-streaming-text-core` | conversation | `import '@aceshooting/lyra-ui/components/lr-streaming-text-core.js';` | `dompurify`, `katex`, `marked`, `shiki` | `lr-markdown-core` | none | 78.9 KiB |
-| <a id="lr-style-panel"></a>`lr-style-panel` | utility | `import '@aceshooting/lyra-ui/components/lr-style-panel.js';` | none | `lr-button`, `lr-option`, `lr-segmented`, `lr-select`, `lr-slider`, `lr-swatch-picker` | none | 129.4 KiB |
+| <a id="lr-style-panel"></a>`lr-style-panel` | utility | `import '@aceshooting/lyra-ui/components/lr-style-panel.js';` | none | `lr-button`, `lr-option`, `lr-segmented`, `lr-select`, `lr-slider`, `lr-swatch-picker` | none | 129.5 KiB |
 | <a id="lr-subagent-panel"></a>`lr-subagent-panel` | agent-tools | `import '@aceshooting/lyra-ui/components/lr-subagent-panel.js';` | none | `lr-badge`, `lr-empty` | none | 51 KiB |
 | <a id="lr-suggestion-chips"></a>`lr-suggestion-chips` | conversation | `import '@aceshooting/lyra-ui/components/lr-suggestion-chips.js';` | none | `lr-icon`, `lr-scroller` | none | 51.6 KiB |
 | <a id="lr-svg-viewer"></a>`lr-svg-viewer` | viewers | `import '@aceshooting/lyra-ui/components/lr-svg-viewer.js';` | `dompurify` | `lr-pan-zoom` | none | 57.4 KiB |
