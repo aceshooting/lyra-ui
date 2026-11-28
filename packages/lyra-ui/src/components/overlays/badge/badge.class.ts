@@ -94,6 +94,7 @@ export type BadgeAttention = 'none' | 'pulse' | 'bounce';
  * routed onto the label color.
  * @cssprop [--lr-badge-font-size=var(--lr-font-size-sm)] - The badge's label font size. Each `size`
  * sets it to that step's font size.
+ * @cssprop [--lr-badge-font-family=inherit] - The label font family (also used by `lr-tag`); unset, the label inherits the surrounding family. Useful for monospace version tags.
  * @cssprop [--lr-badge-font-weight=var(--lr-font-weight-medium)] - The badge's label font weight.
  * @cssprop [--lr-badge-line-height=var(--lr-line-height-compact)] - The badge's label line height.
  * @cssprop [--lr-badge-padding-inline=var(--lr-space-s)] - The badge's inline padding. Each `size`

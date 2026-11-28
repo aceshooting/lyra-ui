@@ -123,3 +123,11 @@ export const NarrowAllocation: StoryObj = {
     <lr-tag variant="brand" with-remove>A deliberately very long tag label that has to truncate</lr-tag>
   </div>`,
 };
+
+export const MonospaceFont: StoryObj = {
+  name: 'Monospace font family',
+  render: () => html`<div style="display:flex;gap:0.5rem;--lr-badge-font-family:var(--lr-font-mono, monospace)">
+    <lr-badge variant="neutral">v1.4.2</lr-badge>
+    <lr-badge variant="brand">v2.0.0-rc.1</lr-badge>
+  </div>`,
+};

@@ -74,6 +74,7 @@ export const styles = css`
     background: var(--lr-badge-background, var(--lr-badge-fill, var(--_lr-badge-fill)));
     color: var(--lr-badge-color, var(--lr-badge-text, var(--_lr-badge-text)));
     font-size: var(--lr-badge-font-size, var(--_lr-badge-font-size));
+    font-family: var(--lr-badge-font-family, inherit);
     font-weight: var(--lr-badge-font-weight, var(--lr-font-weight-medium));
     line-height: var(--lr-badge-line-height, var(--lr-line-height-compact));
   }

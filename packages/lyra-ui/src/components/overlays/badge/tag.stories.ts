@@ -61,3 +61,11 @@ export const Disabled: StoryObj = {
     <lr-tag variant="brand" with-remove disabled>locked</lr-tag>
   </div>`,
 };
+
+export const MonospaceVersionTags: StoryObj = {
+  name: 'Monospace version tags',
+  render: () => html`<div style="display:flex;gap:0.5rem;--lr-badge-font-family:var(--lr-font-mono, monospace)">
+    <lr-tag variant="neutral">v1.4.2</lr-tag>
+    <lr-tag variant="brand">v2.0.0-rc.1</lr-tag>
+  </div>`,
+};
