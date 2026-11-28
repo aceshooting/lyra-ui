@@ -9,6 +9,7 @@ import {
   type LyraAccentBackground,
   type LyraMode,
   type LyraStyleChangeDetail,
+  type LyraStyleRestore,
   type LyraThemeAccent,
   type LyraThemeTokenName,
   type LyraThemeTokenValue,
@@ -861,6 +862,86 @@ describe('startLyraStyle', () => {
     expect(writes).to.deep.equal([]);
   });
 
+  describe('with a restore policy', () => {
+    // Saved choices need no optional stylesheet, so whole-profile applies stay warning-free. Host
+    // values differ from the runtime's defaults, which earlier tests leave runtime-owned.
+    const host = { 'data-lr-look': 'lyra', 'data-lr-surface': 'solid', 'data-lr-density': 'compact' };
+    const profile = { version: 2, mode: 'dark', look: 'shadcn', treatment: 'glass', density: 'comfortable', accent: '#4f8ff7',
+      overrides: { '--lr-theme-radius': '9px' } };
+
+    function expectHostAxes(): void {
+      for (const [name, value] of Object.entries(host)) expect(document.documentElement.getAttribute(name), name).to.equal(value);
+    }
+
+    beforeEach(() => {
+      resetRoot();
+      for (const [name, value] of Object.entries(host)) document.documentElement.setAttribute(name, value);
+    });
+
+    afterEach(() => {
+      // An unset start restores the whole-profile policy for the remaining tests.
+      startLyraStyle();
+      for (const name of [...Object.keys(host), 'data-lr-mode']) document.documentElement.removeAttribute(name);
+    });
+
+    it('restores only the listed axes and keeps later runtime applies off host-owned axes', () => {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+      watchStorageWrites();
+      const style = startLyraStyle({ restore: ['mode', 'accent'] });
+      expect(writes).to.deep.equal([]);
+      expect(style.look, 'the snapshot still reports the saved profile').to.equal('shadcn');
+      expectHostAxes();
+      expect(document.documentElement.getAttribute('data-lr-accent')).to.equal('custom');
+      expect(appliedThemeValue('--lr-theme-accent')).to.equal('#4f8ff7');
+      expect(document.documentElement.getAttribute('data-lr-theme')).to.equal('dark');
+      expect(document.documentElement.style.getPropertyValue('--lr-theme-radius'), 'look overrides are host-owned').to.equal('');
+
+      setLyraStyle({ look: 'shadcn', surface: 'glass', density: 'comfortable', accent: '#e63950', overrides: { '--lr-theme-radius': '3px' } });
+      expectHostAxes();
+      expect(document.documentElement.style.getPropertyValue('--lr-theme-radius')).to.equal('');
+      expect(document.documentElement.getAttribute('data-lr-accent')).to.equal('custom');
+      expect(appliedThemeValue('--lr-theme-accent')).to.equal('#e63950');
+      expect(getLyraStyle().overrides, 'storage keeps the whole profile').to.deep.equal({ '--lr-theme-radius': '3px' });
+    });
+
+    it('leaves a host-owned mode alone and follows it for restored paint', () => {
+      document.documentElement.setAttribute('data-lr-mode', 'light');
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 2, mode: 'dark', accent: '#e63950' }));
+      watchStorageWrites();
+      startLyraStyle({ restore: 'accent' });
+      expect(writes).to.deep.equal([]);
+      expect(document.documentElement.getAttribute('data-lr-mode')).to.equal('light');
+      expect(document.documentElement.getAttribute('data-lr-theme')).to.equal(null);
+      expect(document.documentElement.getAttribute('data-theme')).to.equal(null);
+      expect(listeners.size, 'a fixed host mode needs no system listener').to.equal(0);
+      expect(document.documentElement.getAttribute('data-lr-accent')).to.equal('custom');
+      expect(appliedThemeValue('--lr-theme-accent')).to.equal('#e63950');
+      expectHostAxes();
+    });
+
+    it('writes nothing for host-owned axes on a clean profile', () => {
+      watchStorageWrites();
+      startLyraStyle({ restore: ['density'] });
+      expect(writes).to.deep.equal([]);
+      expect(localStorage.getItem(STORAGE_KEY)).to.equal(null);
+      expect(document.documentElement.getAttribute('data-lr-look')).to.equal('lyra');
+      expect(document.documentElement.getAttribute('data-lr-surface')).to.equal('solid');
+      expect(document.documentElement.getAttribute('data-lr-density')).to.equal('comfortable');
+      expect(document.documentElement.getAttribute('data-lr-theme')).to.equal(null);
+      expect(document.documentElement.hasAttribute('data-lr-accent')).to.equal(false);
+    });
+
+    it('ignores unknown axes and treats a policy without a known axis as the whole profile', () => {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+      startLyraStyle({ restore: ['look', 'bogus'] as unknown as LyraStyleRestore });
+      expect(document.documentElement.getAttribute('data-lr-look')).to.equal('shadcn');
+      expect(document.documentElement.getAttribute('data-lr-surface')).to.equal('solid');
+      startLyraStyle({ restore: ['bogus'] as unknown as LyraStyleRestore });
+      expect(document.documentElement.getAttribute('data-lr-surface')).to.equal('glass');
+      expect(document.documentElement.getAttribute('data-lr-density')).to.equal('comfortable');
+    });
+  });
+
   it('applies the last applied style when storage cannot be read', () => {
     setLyraStyle({ mode: 'system', accent: null });
     const originalGetItem = Storage.prototype.getItem;
@@ -1189,6 +1270,29 @@ describe('lyraThemeBootstrap script-tag configuration', () => {
       }
     });
   }
+
+  it('restores a space-separated axis list prepaint, painting a custom accent without host axes', () => {
+    const root = document.documentElement;
+    const fixed = { 'data-lr-look': 'lyra', 'data-lr-surface': 'solid', 'data-lr-density': 'compact' };
+    const previous = Object.fromEntries(Object.keys(fixed).map(name => [name, root.getAttribute(name)]));
+    try {
+      for (const [name, value] of Object.entries(fixed)) root.setAttribute(name, value);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 2, mode: 'dark', look: 'shadcn', treatment: 'glass',
+        accent: '#e63950', overrides: { '--lr-theme-radius': '12px' } }));
+      const stored = localStorage.getItem(STORAGE_KEY);
+      withCurrentScript(scriptTag({ 'data-lr-theme-restore': 'mode accent' }), () => new Function(lyraThemeBootstrap)());
+      for (const [name, value] of Object.entries(fixed)) expect(root.getAttribute(name), name).to.equal(value);
+      expect(root.getAttribute('data-lr-mode')).to.equal('dark');
+      expect(root.getAttribute('data-lr-accent')).to.equal('custom');
+      expect(appliedThemeValue('--lr-theme-accent')).to.equal('#e63950');
+      expect(root.style.getPropertyValue('--lr-theme-radius')).to.equal('');
+      expect(localStorage.getItem(STORAGE_KEY)).to.equal(stored);
+    } finally {
+      for (const [name, value] of Object.entries(previous)) {
+        if (value === null) root.removeAttribute(name); else root.setAttribute(name, value);
+      }
+    }
+  });
 
   it('keeps factory mode-only restoration when the script policy is invalid', () => {
     const root = document.documentElement;

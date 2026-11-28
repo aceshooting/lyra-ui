@@ -91,6 +91,65 @@ test('mode-only leaves previously owned axes and properties untouched', () => {
   assert.equal(result.attrs.get('data-lr-look'), 'lyra');
   assert.equal(result.properties.get('--lr-theme-color-brand-fill-loud'), 'purple');
 });
+const profile = { version: 2, mode: 'dark', look: 'material', treatment: 'glass', density: 'touch', accentName: 'ruby',
+  tokens: { '--lr-theme-radius': '12px' }, overrides: { '--lr-theme-radius': '9px' }, surfaceOpacity: 0.3 };
+for (const [label, options] of [
+  ['factory list', { factory: { restore: ['mode', 'accent'] } }],
+  ['script list', { script: { 'data-lr-theme-restore': ' mode   accent ' } }],
+  ['script list over factory mode', { factory: { restore: 'mode' }, script: { 'data-lr-theme-restore': 'accent mode' } }],
+]) test(`per-axis ${label} restores mode and accent while host axes stay untouched`, () => {
+  const result = execute({ saved: profile, dark: true, ...options });
+  assert.equal(result.attrs.get('data-lr-look'), 'lyra');
+  assert.equal(result.attrs.get('data-lr-surface'), 'solid');
+  assert.equal(result.attrs.get('data-lr-density'), 'compact');
+  assert.equal(result.attrs.get('data-lr-accent'), 'ruby');
+  assert.equal(result.attrs.get('data-lr-mode'), 'dark');
+  assert.equal(result.attrs.get('data-theme'), 'dark');
+  assert.deepEqual([...result.properties], [['--lr-theme-color-brand-fill-loud', 'purple']]);
+});
+test('unlisted mode is host-owned: no mode or resolved-mode attributes are written', () => {
+  const result = execute({ saved: profile, dark: true, factory: { restore: ['look'] } });
+  assert.equal(result.attrs.get('data-lr-look'), 'material');
+  assert.equal(result.attrs.get('data-lr-mode'), undefined);
+  assert.equal(result.attrs.get('data-theme'), undefined);
+  assert.equal(result.attrs.get('data-lr-surface'), 'solid');
+  assert.equal(result.attrs.get('data-lr-accent'), 'none');
+  assert.equal(result.properties.get('--lr-theme-surface-opacity'), undefined, 'surface opacity belongs to the surface axis');
+});
+test('a clean profile writes nothing for host-owned axes', () => {
+  for (const saved of [null, '{broken', {}]) {
+    const result = execute({ saved, factory: { restore: ['density'] } });
+    assert.deepEqual(Object.fromEntries(result.attrs), { ...fixed, 'data-lr-density': 'comfortable' });
+    assert.deepEqual([...result.properties], [['--lr-theme-color-brand-fill-loud', 'purple']]);
+  }
+});
+test('invalid restore tokens are ignored and fail safe to the configured default', () => {
+  const modeOnly = execute({ saved: profile, script: { 'data-lr-theme-restore': 'mode bogus' } });
+  assert.equal(modeOnly.attrs.get('data-lr-look'), 'lyra');
+  assert.equal(modeOnly.attrs.get('data-lr-mode'), 'dark');
+  for (const options of [{ factory: { restore: ['bogus'] } }, { script: { 'data-lr-theme-restore': 'Accent' } }, { factory: { restore: ['all', 'mode'] } }]) {
+    const result = execute({ saved: profile, ...options });
+    assert.equal(result.attrs.get('data-lr-look'), 'material');
+    assert.equal(result.attrs.get('data-lr-surface'), 'glass');
+  }
+  const fallback = execute({ saved: profile, factory: { restore: ['mode', 'accent'] }, script: { 'data-lr-theme-restore': 'bogus' } });
+  assert.equal(fallback.attrs.get('data-lr-look'), 'lyra');
+  assert.equal(fallback.attrs.get('data-lr-accent'), 'ruby');
+});
+test('per-axis restoration leaves previously owned host-axis attributes and properties untouched', () => {
+  const result = execute({ factory: { restore: ['mode', 'accent'] }, saved: { mode: 'dark', accentName: 'ruby' }, before: (root) => {
+    root[Symbol.for('@aceshooting/lyra-ui.style-ownership.v1')] = {
+      attributes: new Map([['data-lr-look', { before: 'material', priority: '', written: 'lyra' }]]),
+      properties: new Map([['--lr-theme-color-brand-fill-loud', { before: 'red', priority: '', written: 'purple' }]]),
+    };
+  } });
+  assert.equal(result.attrs.get('data-lr-look'), 'lyra');
+  assert.equal(result.properties.get('--lr-theme-color-brand-fill-loud'), 'purple');
+});
+test('a complete axis list is the whole-profile policy', () => {
+  assert.equal(api.createLyraThemeBootstrap({ restore: ['accent', 'density', 'mode', 'surface', 'look'] }), api.lyraThemeBootstrap);
+  assert.equal(api.createLyraThemeBootstrap({ restore: 'all' }), api.lyraThemeBootstrap);
+});
 test('factory policy serialization stays script-safe', () => {
   const script = api.createLyraThemeBootstrap({ restore: 'mode', storageKey: '</script>\u2028\u2029' });
   assert.doesNotMatch(script, /<\/|<!--|<script|\u2028|\u2029/i);

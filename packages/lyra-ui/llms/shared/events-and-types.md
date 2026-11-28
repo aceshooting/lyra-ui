@@ -2276,7 +2276,11 @@ These named interfaces and helper signatures are available to typed integrations
   `createLyraThemeBootstrap(options?: LyraThemeBootstrapOptions): string`
   `LyraThemeBootstrapOptions {
   storageKey?: string;
-  restore?: 'all' | 'mode';
+  restore?: LyraStyleRestore;
+}`
+  `LyraStyleRestore = 'all' | LyraStyleAxis | readonly ('all' | LyraStyleAxis)[]`
+  `LyraStyleStartOptions {
+  restore?: LyraStyleRestore;
 }`
   `LyraThemeSemanticRole = 'brand' | 'success' | 'warning' | 'danger' | 'neutral'`
   `LyraThemeAccentValue = string | null | { light?: string | null; dark?: string | null }`
@@ -2350,7 +2354,7 @@ These named interfaces and helper signatures are available to typed integrations
   `parseLyraStyleRecord(value: unknown): Readonly<LyraStyle>`
   `resetLyraStyle(fields?: readonly LyraStyleField[]): Readonly<LyraStyle>`
   `setLyraStyle(choices: LyraStyleChoices): Readonly<LyraStyle>`
-  `startLyraStyle(): Readonly<LyraStyle>`
+  `startLyraStyle(options?: LyraStyleStartOptions): Readonly<LyraStyle>`
 
 - **`vue-contracts`** — Framework integration type contracts, including the multi-split
   `for` launcher id and `trigger` element reference.

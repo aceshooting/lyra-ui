@@ -1397,6 +1397,8 @@ export type {
   LyraStyleAxis,
   LyraStyleChangeDetail,
   LyraStyleField,
+  LyraStyleRestore,
+  LyraStyleStartOptions,
   LyraSurface,
   LyraThemeAccent,
   LyraThemeAccentValue,

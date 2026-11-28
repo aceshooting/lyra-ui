@@ -1,7 +1,7 @@
 {
-  "$comment": "Ceilings for the exact shipped lyraThemeBootstrap string, measured raw and with gzip level 9. Reviewed mode-only restoration adds validated factory/script configuration while preserving host-owned visual axes, inline styles and ownership records. The build enforces the reviewed measurements plus 2% rounded-up headroom; bundle re-minification is deliberately excluded.",
-  "reviewedRawBytes": 17239,
-  "reviewedGzipBytes": 6306,
-  "maxRawBytes": 17584,
-  "maxGzipBytes": 6433
+  "$comment": "Ceilings for the exact shipped lyraThemeBootstrap string, measured raw and with gzip level 9. Reviewed mode-only restoration adds validated factory/script configuration while preserving host-owned visual axes, inline styles and ownership records. The build enforces the reviewed measurements plus 2% rounded-up headroom; bundle re-minification is deliberately excluded. Per-axis restoration (an axis list in restore / data-lr-theme-restore, leaving unlisted axes to the host) measures 18,088 raw and 6,602 gzip bytes.",
+  "reviewedRawBytes": 18088,
+  "reviewedGzipBytes": 6602,
+  "maxRawBytes": 18450,
+  "maxGzipBytes": 6735
 }

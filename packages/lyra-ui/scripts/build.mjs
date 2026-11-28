@@ -73,6 +73,10 @@ console.log(
 const consolidatedDeclarations = consolidateBuildDeclarations(packageDir);
 console.log(`Published declaration entries consolidated: ${consolidatedDeclarations.removed} redundant files removed.`);
 
+// The Vite plugin's hand-written declaration is a published types root, so it lands before pruning.
+await mkdir(join(packageDir, 'dist', 'vite'), { recursive: true });
+await cp(join(packageDir, 'src', 'vite', 'theme-bootstrap.d.ts'), join(packageDir, 'dist', 'vite', 'theme-bootstrap.d.ts'));
+
 const prunedDeclarations = pruneUnreachableBuildDeclarations(packageDir);
 console.log(`Published unreachable declaration modules removed: ${prunedDeclarations.removedPaths.length}.`);
 
@@ -154,3 +158,7 @@ console.log('Locale loaders retargeted at @aceshooting/lyra-translations.');
 // loaders only become peer imports just above.
 const guardedPeers = await guardBuildPeerImports(join(packageDir, 'dist'), optionalPeerNames(JSON.parse(await readFile(join(packageDir, 'package.json'), 'utf8'))));
 console.log(`Optional peer imports guarded: ${guardedPeers.imports} across ${guardedPeers.files} modules.`);
+
+// The Node-only Vite plugin for the theme bootstrap asset is authored JavaScript; copied after
+// every JavaScript rewrite so its source ships as written, outside the browser module graph.
+await cp(join(packageDir, 'src', 'vite', 'theme-bootstrap.mjs'), join(packageDir, 'dist', 'vite', 'theme-bootstrap.js'));
