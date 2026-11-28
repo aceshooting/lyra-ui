@@ -36,19 +36,87 @@ function safeUrlOrNull(
   }
 }
 
+/** The parts of the current document's `location` the same-origin resource rule reads. */
+export interface SafeUrlDocumentLocation {
+  readonly protocol: string;
+  readonly host: string;
+  readonly origin: string;
+}
+
+// A document served from its own non-web scheme (a desktop shell's privileged `app://host/`) builds
+// absolute asset URLs on that scheme, which the fixed resource allowlist would refuse. Such a URL
+// is admitted only when it names the document's own origin exactly. Script-executing schemes never
+// qualify, nor do `file:` (one file document would unlock the whole local filesystem) and `about:`.
+const NEVER_SAME_ORIGIN_SCHEMES = new Set(['javascript:', 'vbscript:', 'file:', 'about:']);
+
+function currentDocumentLocation(): SafeUrlDocumentLocation | undefined {
+  return (globalThis as { location?: SafeUrlDocumentLocation }).location;
+}
+
+function isSameOriginCustomScheme(
+  url: string,
+  documentLocation: SafeUrlDocumentLocation | null | undefined,
+  URLCtor: typeof URL,
+): boolean {
+  if (!documentLocation) return false;
+  const { protocol, host, origin } = documentLocation;
+  if (typeof protocol !== 'string' || typeof host !== 'string' || typeof origin !== 'string') return false;
+  // The document must hold a real tuple origin on that scheme and host: an opaque (`null`) origin
+  // or one that disagrees with its own scheme and host never vouches for anything.
+  if (host === '' || origin === 'null' || origin !== `${protocol}//${host}`) return false;
+  if (NEVER_SAME_ORIGIN_SCHEMES.has(protocol)) return false;
+  let parsed: URL;
+  try {
+    // No base: only an absolute URL can name a scheme of its own.
+    parsed = new URLCtor(url);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol !== protocol || parsed.host !== host) return false;
+  // Engines report `null` for a non-special scheme's origin unless the scheme is registered as
+  // standard; when an origin is reported it must match too.
+  return parsed.origin === 'null' || parsed.origin === origin;
+}
+
+function safeResourceUrlOrNull(
+  url: unknown,
+  URLCtor: typeof URL,
+  documentLocation: SafeUrlDocumentLocation | null | undefined,
+): string | null {
+  const safe = safeUrlOrNull(url, SAFE_RESOURCE_SCHEMES, URLCtor);
+  if (safe !== null || typeof url !== 'string') return safe;
+  const trimmed = url.trim();
+  return trimmed !== '' && isSameOriginCustomScheme(trimmed, documentLocation, URLCtor) ? trimmed : null;
+}
+
 /** Returns a trimmed URL safe for an `<img>`/`<video>` `src`, or `null`.
  * Relative URLs and `http:`, `https:`, `blob:`, and `data:` are allowed. The
  * platform parser performs the same control-character normalization as DOM
- * URL sinks, preventing obfuscated schemes such as `java\tscript:`. */
-export function safeMediaSrc(url: unknown, URLCtor: typeof URL = URL): string | null {
-  return safeUrlOrNull(url, SAFE_RESOURCE_SCHEMES, URLCtor);
+ * URL sinks, preventing obfuscated schemes such as `java\tscript:`.
+ * An absolute URL on another scheme is also allowed when it names exactly the
+ * current document's own non-opaque origin (scheme, host and port), so an app
+ * served from a custom scheme such as `app://host/` can load its own assets;
+ * `javascript:`, `vbscript:`, `file:` and `about:` never qualify. Without a
+ * document location (SSR, `null`) only the fixed allowlist applies.
+ * `documentLocation` defaults to `globalThis.location`. */
+export function safeMediaSrc(
+  url: unknown,
+  URLCtor: typeof URL = URL,
+  documentLocation: SafeUrlDocumentLocation | null | undefined = currentDocumentLocation(),
+): string | null {
+  return safeResourceUrlOrNull(url, URLCtor, documentLocation);
 }
 
 /** Returns a trimmed URL safe to pass to `fetch()`, or `null`. This shares the
  * resource allowlist with media sources so text/image `data:` URLs remain
- * usable, while navigation-only and executable schemes are rejected. */
-export function safeFetchUrl(url: unknown, URLCtor: typeof URL = URL): string | null {
-  return safeUrlOrNull(url, SAFE_RESOURCE_SCHEMES, URLCtor);
+ * usable, while navigation-only and executable schemes are rejected. It also
+ * shares `safeMediaSrc()`'s same-origin custom-scheme rule. */
+export function safeFetchUrl(
+  url: unknown,
+  URLCtor: typeof URL = URL,
+  documentLocation: SafeUrlDocumentLocation | null | undefined = currentDocumentLocation(),
+): string | null {
+  return safeResourceUrlOrNull(url, URLCtor, documentLocation);
 }
 
 /** Returns a trimmed URL safe for a *navigation* `<a href>`, or `null`.

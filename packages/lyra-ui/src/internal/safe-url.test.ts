@@ -9,6 +9,7 @@ import {
   parseLinkSchemes,
   safeLinkHrefWithin,
   safeActionLinkHref,
+  type SafeUrlDocumentLocation,
 } from './safe-url.js';
 
 describe('sink-specific safe URL helpers', () => {
@@ -219,5 +220,75 @@ describe('author-written action links', () => {
     }
     expect(safeActionLinkHref(42)).to.be.null;
     expect(safeActionLinkHref(null)).to.be.null;
+  });
+});
+
+describe('same-origin custom-scheme resources', () => {
+  const app: SafeUrlDocumentLocation = { protocol: 'app:', host: 'host', origin: 'app://host' };
+
+  it('admits an absolute URL on the document\'s own custom-scheme origin for resource sinks only', () => {
+    for (const url of ['app://host/assets/x.svg', ' APP://host/flags/fr.svg?v=1#a ']) {
+      expect(safeMediaSrc(url, URL, app), url).to.equal(url.trim());
+      expect(safeFetchUrl(url, URL, app), url).to.equal(url.trim());
+      expect(safeLinkHref(url), url).to.be.null;
+      expect(safeDownloadHref(url), url).to.be.null;
+      expect(safeDocumentNavigationUrl(url), url).to.be.null;
+    }
+  });
+
+  it('refuses a custom-scheme URL on any other origin or without an authority', () => {
+    for (const url of ['app://other/x.svg', 'app://host:8080/x.svg', 'app://host.evil/x', 'other://host/x.svg',
+      'app:host/x.svg', 'app:///x.svg', 'app://user@other/x']) {
+      expect(safeMediaSrc(url, URL, app), url).to.be.null;
+      expect(safeFetchUrl(url, URL, app), url).to.be.null;
+    }
+  });
+
+  it('never admits script-executing, local-file or about: schemes, whatever the document location claims', () => {
+    const cases: [SafeUrlDocumentLocation, string][] = [
+      [{ protocol: 'javascript:', host: 'host', origin: 'javascript://host' }, 'javascript://host/%0aalert(1)'],
+      [{ protocol: 'vbscript:', host: 'host', origin: 'vbscript://host' }, 'vbscript://host/%0amsgbox(1)'],
+      [{ protocol: 'file:', host: '', origin: 'file://' }, 'file:///etc/passwd'],
+      [{ protocol: 'file:', host: 'share', origin: 'file://share' }, 'file://share/secret'],
+      [{ protocol: 'about:', host: '', origin: 'null' }, 'about:blank'],
+    ];
+    for (const [documentLocation, url] of cases) {
+      expect(safeMediaSrc(url, URL, documentLocation), url).to.be.null;
+      expect(safeFetchUrl(url, URL, documentLocation), url).to.be.null;
+    }
+    for (const url of ['javascript:alert(1)', 'java\tscript:alert(1)', 'vbscript:x', 'file:///etc/passwd', 'about:blank']) {
+      expect(safeMediaSrc(url, URL, app), url).to.be.null;
+    }
+  });
+
+  it('refuses when the document origin is opaque or does not match its own scheme and host', () => {
+    for (const documentLocation of [
+      { protocol: 'app:', host: 'host', origin: 'null' },
+      { protocol: 'app:', host: 'host', origin: 'app://other' },
+      { protocol: 'app:', host: '', origin: 'app://' },
+      { protocol: 'app:', host: 'host', origin: 42 } as unknown as SafeUrlDocumentLocation,
+    ]) {
+      expect(safeMediaSrc('app://host/x.svg', URL, documentLocation)).to.be.null;
+    }
+  });
+
+  it('keeps the default allowlist unchanged under a custom-scheme document and without a location', () => {
+    for (const documentLocation of [app, null, undefined]) {
+      for (const url of ['http://example.test/a', 'https://example.test/a', 'blob:https://example.test/id',
+        'data:image/svg+xml,<svg></svg>', '/root/path', 'relative/path', '//cdn.example.test/a', '?q=1']) {
+        expect(safeMediaSrc(url, URL, documentLocation), url).to.equal(url);
+        expect(safeFetchUrl(url, URL, documentLocation), url).to.equal(url);
+      }
+      for (const url of ['mailto:a@example.test', 'tel:+1', 'ftp://example.test/f', '', 42]) {
+        expect(safeMediaSrc(url, URL, documentLocation), String(url)).to.be.null;
+      }
+    }
+    expect(safeMediaSrc('app://host/x.svg', URL, null)).to.be.null;
+    expect(safeFetchUrl('app://host/x.svg', URL, undefined)).to.be.null;
+  });
+
+  it('reads the current document location by default', () => {
+    expect(safeMediaSrc('app://host/x.svg')).to.be.null;
+    expect(safeMediaSrc(`${location.origin}/x.svg`)).to.equal(`${location.origin}/x.svg`);
   });
 });
