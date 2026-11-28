@@ -11,12 +11,12 @@ describe('lr-button --lr-button-min-inline-size', () => {
   });
 
   it('a short and a long label end equal width when the token is set, and the host grows', async () => {
-    const wrap = await fixture<HTMLElement>(html`<div style="--lr-button-min-inline-size: 200px">
-      <lr-button>No</lr-button><lr-button>A considerably longer label</lr-button>
+    const wrap = await fixture<HTMLElement>(html`<div style="--lr-button-min-inline-size: 400px">
+      <lr-button>No</lr-button><lr-button>Save changes</lr-button>
     </div>`);
     const [a, b] = Array.from(wrap.querySelectorAll('lr-button'));
-    expect(getComputedStyle(base(a!)).minInlineSize).to.equal('200px');
-    expect(a!.getBoundingClientRect().width).to.be.at.least(199.5);
+    expect(getComputedStyle(base(a!)).minInlineSize).to.equal('400px');
+    expect(a!.getBoundingClientRect().width).to.be.at.least(399.5);
     expect(Math.abs(a!.getBoundingClientRect().width - b!.getBoundingClientRect().width)).to.be.lessThan(1);
     expect(Math.abs(base(a!).getBoundingClientRect().width - a!.getBoundingClientRect().width)).to.be.lessThan(1);
   });

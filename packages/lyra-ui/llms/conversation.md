@@ -290,7 +290,8 @@ every heading; a leading heading keeps none), `--lr-markdown-heading-1-font-size
 `--lr-markdown-heading-3-font-size` (default `calc(var(--lr-size-1em) * 1.17)`) and
 `--lr-markdown-heading-4-font-size` (default `var(--lr-size-1em)`) — together these restate the
 browser scale — `--lr-markdown-heading-font-weight`
-(default `var(--lr-font-weight-bold)`), `--lr-markdown-link-color` (default `var(--lr-color-brand)`)
+(default `var(--lr-font-weight-bold)`), `--lr-markdown-heading-color` (default `inherit`, so
+headings take the content colour), `--lr-markdown-link-color` (default `var(--lr-color-brand)`)
 and `--lr-markdown-link-hover-color` (default the link colour), `--lr-markdown-blockquote-border-color`
 (default `var(--lr-color-border-subtle)`), `--lr-markdown-blockquote-color` (default
 `var(--lr-color-text-quiet)`) and `--lr-markdown-list-indent` (default `var(--lr-size-2-5rem)`).
@@ -301,6 +302,10 @@ split the space after paragraphs and after lists from the shared rhythm, and
 The `code-block` and `inline-code` surfaces have `--lr-markdown-code-block-padding`,
 `--lr-markdown-code-block-radius`, `--lr-markdown-code-block-bg`, `--lr-markdown-code-padding`,
 `--lr-markdown-code-radius` and `--lr-markdown-code-bg` (all listed below);
+`--lr-markdown-code-color` (default `inherit`) colours inline `code` text only, and
+`--lr-markdown-code-block-border-color` (default `var(--lr-color-border-subtle)`) and
+`--lr-markdown-code-block-border-width` (default `0` on the plain fenced block,
+`var(--lr-border-width-thin)` on the framed block with a header) draw the fenced block's edge;
 `--lr-markdown-code-block-font-size` (default `var(--lr-font-size-sm)`) and
 `--lr-markdown-code-block-line-height` (default `var(--lr-line-height-normal)`) set the fenced code's
 type. Every token inherits, so
