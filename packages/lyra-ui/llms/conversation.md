@@ -576,7 +576,7 @@ tokens (`--lr-markdown-block-gap`, `--lr-markdown-heading-margin-block-start`,
 `--lr-markdown-heading-1-font-size`,
 `--lr-markdown-heading-2-font-size`, `--lr-markdown-heading-3-font-size`,
 `--lr-markdown-heading-4-font-size`,
-`--lr-markdown-heading-font-weight`, `--lr-markdown-link-color`, `--lr-markdown-link-hover-color`,
+`--lr-markdown-heading-font-weight`, `--lr-markdown-heading-color` (default `inherit`, so headings take the content colour), `--lr-markdown-code-color` (inline `code` text colour, default `inherit`), `--lr-markdown-code-block-border-color` (default `var(--lr-color-border-subtle)`) and `--lr-markdown-code-block-border-width` (default `0` on the plain fenced block, `var(--lr-border-width-thin)` on the framed block with a header), `--lr-markdown-link-color`, `--lr-markdown-link-hover-color`,
 `--lr-markdown-blockquote-border-color`, `--lr-markdown-blockquote-color`,
 `--lr-markdown-list-indent`).
 `--lr-markdown-max-height` (default `none` — cap on `[part="content"]`'s block size; the

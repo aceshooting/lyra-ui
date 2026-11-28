@@ -256,6 +256,13 @@ export interface LyraMarkdownEventMap extends LyraAnchorTargetEventMap {
  * @cssprop [--lr-markdown-heading-3-font-size=calc(var(--lr-size-1em) * 1.17)] - `<h3>` font size.
  * @cssprop [--lr-markdown-heading-4-font-size=var(--lr-size-1em)] - `<h4>` font size.
  * @cssprop [--lr-markdown-heading-font-weight=var(--lr-font-weight-bold)] - Weight of every heading.
+ * @cssprop [--lr-markdown-heading-color=inherit] - Text colour of every heading; unset, headings
+ *   take the content colour (`--lr-markdown-color`).
+ * @cssprop [--lr-markdown-code-color=inherit] - Text colour of an inline `code` span; code inside a
+ *   fenced block is unaffected.
+ * @cssprop [--lr-markdown-code-block-border-color=var(--lr-color-border-subtle)] - Border colour of
+ *   a fenced code block (the framed block with a header, or the plain block once a width is set).
+ * @cssprop [--lr-markdown-code-block-border-width=0 (plain block) | var(--lr-border-width-thin) (framed block)] - Border width of a fenced code block.
  * @cssprop [--lr-markdown-link-color=var(--lr-color-brand)] - Rendered link colour.
  * @cssprop [--lr-markdown-link-hover-color=var(--lr-markdown-link-color)] - Rendered link colour on hover.
  * @cssprop [--lr-markdown-blockquote-border-color=var(--lr-color-border-subtle)] - Blockquote rule colour.

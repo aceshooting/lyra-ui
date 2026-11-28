@@ -337,3 +337,11 @@ export const DenseProseTokens: Story = {
     .content=${`${sample}\n${codeSample}`}
   ></lr-markdown>`,
 };
+
+/** Heading and inline-code text colour, plus a bordered fenced block. */
+export const ColorAndBorderTokens: Story = {
+  render: () => html`<lr-markdown
+    style="max-inline-size: 28rem; --lr-markdown-heading-color: var(--lr-color-brand); --lr-markdown-code-color: var(--lr-color-danger); --lr-markdown-code-block-border-color: var(--lr-color-brand); --lr-markdown-code-block-border-width: var(--lr-border-width-medium);"
+    .content=${'# Heading\n\nSome `inline code` here.\n\n```\nfenced\n```'}
+  ></lr-markdown>`,
+};

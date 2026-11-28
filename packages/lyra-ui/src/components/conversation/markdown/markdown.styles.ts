@@ -81,6 +81,7 @@ export const styles = css`
     line-height: var(--lr-line-height-compact);
     margin-block: var(--lr-markdown-heading-margin-block-start, var(--lr-space-l)) var(--lr-markdown-block-gap, var(--lr-space-s));
     font-weight: var(--lr-markdown-heading-font-weight, var(--lr-font-weight-bold));
+    color: var(--lr-markdown-heading-color, inherit);
   }
   /* The heading-size fallbacks restate the browser's own h1-h4 scale, so an unset token keeps it. */
   h1[part='heading'] {
@@ -147,6 +148,7 @@ export const styles = css`
   [part='content'] code {
     font-family: var(--lr-markdown-font-mono, var(--lr-font-mono));
     font-size: var(--lr-size-0-875em);
+    color: var(--lr-markdown-code-color, inherit);
     background: var(--lr-markdown-code-bg, var(--lr-color-brand-quiet));
     border-radius: var(--lr-markdown-code-radius, calc(var(--lr-radius) * 0.5));
     padding: var(--lr-markdown-code-padding, var(--lr-size-0-125rem) var(--lr-size-0-3125rem));
@@ -157,6 +159,7 @@ export const styles = css`
     margin-block: 0 var(--lr-markdown-block-gap, var(--lr-space-s));
     padding: var(--lr-markdown-code-block-padding, var(--lr-space-s) var(--lr-space-m));
     border-radius: var(--lr-markdown-code-block-radius, var(--lr-radius));
+    border: var(--lr-markdown-code-block-border-width, 0) solid var(--lr-markdown-code-block-border-color, var(--lr-color-border-subtle));
     background: var(--lr-markdown-code-block-bg, var(--lr-markdown-code-bg, var(--lr-color-brand-quiet)));
     white-space: pre;
     overflow-wrap: normal;
@@ -191,6 +194,7 @@ export const styles = css`
   [part='code-block'] code {
     padding: 0;
     background: none;
+    color: inherit;
     font-size: var(--lr-markdown-code-block-font-size, var(--lr-font-size-sm));
     line-height: var(--lr-markdown-code-block-line-height, var(--lr-line-height-normal));
   }
@@ -282,12 +286,13 @@ export const styles = css`
 
   [part~='code-block-frame']:where([data-lr-code-chrome]) {
     margin-block: 0 var(--lr-markdown-block-gap, var(--lr-space-s));
-    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+    border: var(--lr-markdown-code-block-border-width, var(--lr-border-width-thin)) solid var(--lr-markdown-code-block-border-color, var(--lr-color-border-subtle));
     border-radius: var(--lr-markdown-code-block-radius, var(--lr-radius));
     overflow: clip;
   }
   [part~='code-block-frame']:where([data-lr-code-chrome]) > [part='code-block'] {
     margin: 0;
+    border: 0;
     border-radius: 0;
   }
   [part~='code-block-header']:where([data-lr-code-chrome]) {
