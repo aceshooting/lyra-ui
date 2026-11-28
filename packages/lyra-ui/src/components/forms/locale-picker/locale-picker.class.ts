@@ -43,7 +43,7 @@ import {
 import type { LyraLocaleDirection } from '../../../internal/localization.js';
 import { localeNativeName } from '../../media/flag/language-map.js';
 import { sizes } from '../../../internal/sizes.styles.js';
-import type { LyraSize, LyraLabelDisplay, LyraLabelPlacement } from '../../../internal/variants.js';
+import type { LyraAppearance, LyraSize, LyraLabelDisplay, LyraLabelPlacement } from '../../../internal/variants.js';
 import { styles } from './locale-picker.styles.js';
 import { autocorrectConverter, declaredDefaultConverter, spellcheckConverter } from '../../../internal/converters.js';
 import {
@@ -323,6 +323,7 @@ export interface LyraLocalePickerEventMap {
  * @cssprop [--lr-locale-picker-trigger-radius=var(--lr-locale-picker-radius)] - Corner radius of the trigger
  * only; the listbox and options keep `--lr-locale-picker-radius`.
  * @cssprop [--lr-locale-picker-trigger-hover-bg=var(--lr-color-brand-quiet)] - Trigger hover background.
+ *   Under `appearance="plain"` it defaults to `lr-icon-button`'s hover fill instead.
  * @cssprop [--lr-locale-picker-open-border-color=var(--lr-color-brand)] - Open trigger border color.
  * @cssprop [--lr-locale-picker-option-selected-border-color=var(--lr-color-brand)] - Selected option border.
  * @cssprop [--lr-locale-picker-option-selected-color=var(--lr-color-brand)] - Selected option text.
@@ -330,9 +331,11 @@ export interface LyraLocalePickerEventMap {
  *   Selected option font weight.
  * @cssprop [--lr-locale-picker-option-active-bg=var(--lr-color-brand-quiet)] - Background of a
  *   hovered or keyboard-active option row.
- * @cssprop [--lr-locale-picker-trigger-fill=var(--lr-color-surface)] - Resting trigger background.
+ * @cssprop [--lr-locale-picker-trigger-fill=var(--lr-color-surface)] - Resting trigger background
+ *   (`transparent` under `appearance="plain"`, the raised surface under `filled`/`filled-outlined`,
+ *   the brand fill under `accent`).
  * @cssprop [--lr-locale-picker-trigger-border-color=var(--lr-color-border)] - Resting trigger
- * border color.
+ * border color (`transparent` under `plain`, `filled` and `accent`).
  * @cssprop [--lr-locale-picker-trigger-hover-border-color=var(--lr-locale-picker-trigger-border-color)] -
  * Trigger border color while the pointer is over it. Unset, the border stays exactly where the
  * resting state left it.
@@ -541,6 +544,15 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
   @property({ reflect: true,
     converter: declaredDefaultConverter<LyraSize>('m'),
   }) size: LyraSize = 'm';
+  /** How the trigger fills itself, from the library's shared `appearance` vocabulary. The default
+   *  `'outlined'` is the bordered surface trigger this component always rendered, and stays absent
+   *  from markup until set. `'plain'` drops the fill and edge and paints rest, hover, press and the
+   *  keyboard focus ring exactly like a plain `lr-icon-button` (reading the same
+   *  `--lr-icon-button-bg`/`-hover-bg`/`-active-bg` theme inputs), so a flag-only trigger can sit
+   *  in a row of icon launchers with one resting look. `'filled'`/`'filled-outlined'` tint the
+   *  trigger with the raised surface and `'accent'` gives it the loud brand fill, matching
+   *  `lr-select`. The `--lr-locale-picker-trigger-*` hooks still win in every appearance. */
+  @property({ reflect: true, useDefault: true }) appearance: LyraAppearance = 'outlined';
 
   @state() private activeIndex = -1;
   @state() private searchQuery = '';

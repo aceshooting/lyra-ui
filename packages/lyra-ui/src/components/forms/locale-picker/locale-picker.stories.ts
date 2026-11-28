@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import type { LyraLocalePicker } from '../../lr-locale-picker.js';
 import '../../lr-locale-picker.js';
+import '../../lr-icon-button.js';
 import { loadLyraLocale } from '../../../locale-loader.js';
 // lr-locale-picker composes lr-flag, whose country/language resolution is inert until the optional
 // peer entry is registered. Without this the docs page rendered flag-less rows and (since 11.0.0)
@@ -196,6 +197,30 @@ export const Sizes: Story = {
             <lr-locale-picker size=${size} label=${`Size "${size}"`} .locales=${['fr', 'de']}></lr-locale-picker>
           `,
         )}
+      </div>
+    `;
+  },
+};
+
+export const Appearances: Story = {
+  parameters: { docs: { description: { story: 'The shared `appearance` vocabulary. `plain` paints rest, hover, press and keyboard focus like a plain `lr-icon-button`, so a flag-only trigger sits in a row of icon launchers with one resting look; unset, the trigger stays `outlined`.' } } },
+  render: () => {
+    const appearances = ['outlined', 'filled', 'filled-outlined', 'plain', 'accent'] as const;
+    return html`
+      <div style="display: grid; gap: var(--lr-space-m); max-inline-size: var(--lr-size-20rem)">
+        ${appearances.map(
+          (appearance) => html`
+            <lr-locale-picker appearance=${appearance} label=${`Appearance "${appearance}"`} .locales=${['fr', 'de']}></lr-locale-picker>
+          `,
+        )}
+        <div style="display: flex; align-items: center; gap: var(--lr-space-xs); --lr-icon-button-size: 2.75rem; --lr-icon-size: 1.125rem; --lr-locale-picker-trigger-height: 2.75rem">
+          <lr-icon-button icon="gem" aria-label="Accent"></lr-icon-button>
+          <lr-icon-button icon="sun" aria-label="Color scheme"></lr-icon-button>
+          <lr-icon-button icon="sliders-horizontal" aria-label="Design"></lr-icon-button>
+          <lr-locale-picker appearance="plain" trigger-display="flag" option-display="label" aria-label="Language"
+            .locales=${[{ tag: 'en', country: 'US' }, { tag: 'fr' }, { tag: 'de' }]}
+            @lr-change-request=${(event: Event) => event.preventDefault()}></lr-locale-picker>
+        </div>
       </div>
     `;
   },

@@ -7981,6 +7981,19 @@ readonly LyraLocaleEntry[]`, `LyraLocaleEntry { tag: string; label?: string; cou
 - `open: boolean = false` (reflected).
 - `size: LyraSize = 'm'` (reflected) — the same full scale as `lr-select`, accepting
   `2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large`.
+- `appearance: LyraAppearance = 'outlined'` (reflected once set; the default stays absent from
+  markup) — the shared fill vocabulary. Unset, the trigger keeps its bordered surface.
+  `'plain'` drops the fill and edge and paints rest, hover, press and the keyboard focus ring
+  exactly like a plain `lr-icon-button`, reading the same `--lr-icon-button-bg`,
+  `--lr-icon-button-hover-bg` and `--lr-icon-button-active-bg` theme inputs, so a flag-only trigger
+  shares one resting look with neighbouring icon launchers. `'filled'`/`'filled-outlined'` use the
+  raised surface and `'accent'` the brand fill with on-brand text, as on `lr-select`. The
+  `--lr-locale-picker-trigger-fill`, `-border-color`, `-hover-bg` and `-hover-border-color` hooks
+  still win in every appearance; the open border and disabled treatment are unchanged.
+
+  ```html
+  <lr-locale-picker appearance="plain" trigger-display="flag" aria-label="Language"></lr-locale-picker>
+  ```
 
 **Lazy catalogs:** `localeLoader?: LyraLocaleLoader` is an optional, property-only callback. When
 unset, selection commits synchronously without loading a catalog. Set it to `loadLyraLocale` from

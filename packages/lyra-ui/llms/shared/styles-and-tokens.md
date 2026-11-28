@@ -169,8 +169,10 @@ square of that size; a `::part(button)` size rule adds nothing. `--lr-icon-size`
 `appearance-launcher` to each `lr-icon-button`, including buttons slotted through a popover.
 Keep the mode action separate from the design fields. Set the locale picker's
 `--lr-locale-picker-trigger-height: 2.75rem`; its flag-only trigger is then a square of that height,
-so it needs no `::part(trigger)` rule either. Use that public flag-only trigger with readable menu
-entries:
+so it needs no `::part(trigger)` rule either. Set `appearance="plain"` on it so its rest, hover,
+press and focus ring match the plain icon buttons beside it, giving the four launchers one resting
+look; the default `outlined` trigger would be the only bordered one. Use that public flag-only
+trigger with readable menu entries:
 
 ```ts
 import '@aceshooting/lyra-ui/components/lr-locale-picker.js';
@@ -178,7 +180,7 @@ import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';
 ```
 
 ```html
-<lr-locale-picker top-layer trigger-display="flag" option-display="label"
+<lr-locale-picker top-layer appearance="plain" trigger-display="flag" option-display="label"
   aria-label="Localized language action"></lr-locale-picker>
 ```
 

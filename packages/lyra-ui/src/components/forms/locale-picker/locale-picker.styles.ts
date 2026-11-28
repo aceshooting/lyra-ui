@@ -1,4 +1,4 @@
-import { activeFill, activeFillTowardText, disabledControl, focusRing, focusRingInset, hoverFillTowardText, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
+import { activeFill, activeFillTowardText, disabledControl, focusRing, focusRingInset, hoverFill, hoverFillTowardText, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
@@ -144,6 +144,90 @@ export const styles = css`
      the press the win -- and never fires on a disabled trigger. */
   :where([part='trigger']):active:where(:not(:disabled)) {
     background: ${activeFill('var(--lr-locale-picker-trigger-hover-bg, var(--lr-color-brand-quiet))')};
+  }
+  /* Appearance treatments. outlined is the base rule above, so the others restate only what
+     changes: same box, border width and radius; only fill, edge and (for accent) text colour move.
+     They sit before the open and disabled rules, which tie on specificity and win on source order. */
+  :host([appearance='filled']) [part='trigger'] {
+    background: var(--lr-locale-picker-trigger-fill, var(--lr-color-surface-raised));
+    border-color: var(--lr-locale-picker-trigger-border-color, transparent);
+  }
+  :host([appearance='filled-outlined']) [part='trigger'] {
+    background: var(--lr-locale-picker-trigger-fill, var(--lr-color-surface-raised));
+  }
+  :host([appearance='accent']) [part='trigger'] {
+    background: var(--lr-locale-picker-trigger-fill, var(--lr-color-brand));
+    border-color: var(--lr-locale-picker-trigger-border-color, transparent);
+    color: var(--lr-color-on-brand);
+  }
+  :host([appearance='accent']) [part='trigger'] [part='expand-icon'] {
+    color: inherit;
+  }
+  /* plain is lr-icon-button's plain action: no fill and no edge at rest, and hover/press mixed
+     from the same resting surface lr-icon-button mixes from, through the same theme inputs. Each
+     state resolves its own private var (the public hooks folded inside it) and the rules below read
+     it bare. The base of the mix is this trigger's own resting fill when a theme sets one, so a
+     retuned fill keeps its identity under the pointer, exactly as icon-action.styles.ts does. */
+  :host([appearance='plain']) {
+    --_lr-locale-picker-plain-base: var(--lr-locale-picker-trigger-fill, var(--lr-icon-button-bg, var(--lr-color-surface)));
+    --_lr-locale-picker-plain-fill: var(--lr-locale-picker-trigger-fill, var(--lr-icon-button-bg, transparent));
+    --_lr-locale-picker-plain-edge: var(--lr-locale-picker-trigger-border-color, transparent);
+    --_lr-locale-picker-plain-hover-fill: var(
+      --lr-locale-picker-trigger-hover-bg,
+      var(--lr-icon-button-hover-bg, ${hoverFill('var(--_lr-locale-picker-plain-base)')})
+    );
+    --_lr-locale-picker-plain-hover-edge: var(
+      --lr-locale-picker-trigger-hover-border-color,
+      var(--_lr-locale-picker-plain-edge)
+    );
+    --_lr-locale-picker-plain-active-fill: var(
+      --lr-icon-button-active-bg,
+      ${activeFill('var(--lr-locale-picker-trigger-hover-bg, var(--_lr-locale-picker-plain-base))')}
+    );
+  }
+  :host([appearance='plain']) [part='trigger'] {
+    background: var(--_lr-locale-picker-plain-fill);
+    border-color: var(--_lr-locale-picker-plain-edge);
+  }
+  /* Every appearance restates the pointer feedback: the treatments above out-specify the shared
+     (0,1,0) hover and press rules, so otherwise only outlined would keep a pointer affordance. */
+  :host([appearance='filled']) :where([part='trigger']):hover:where(:not(:disabled)),
+  :host([appearance='filled-outlined']) :where([part='trigger']):hover:where(:not(:disabled)) {
+    background: var(--lr-locale-picker-trigger-hover-bg, var(--lr-color-brand-quiet));
+    border-color: var(
+      --lr-locale-picker-trigger-hover-border-color,
+      var(--lr-locale-picker-trigger-border-color, transparent)
+    );
+  }
+  /* filled-outlined repeats after the group: its resting edge is the shared border token rather
+     than transparent, so its unset hover fallback has to be that token. */
+  :host([appearance='filled-outlined']) :where([part='trigger']):hover:where(:not(:disabled)) {
+    border-color: var(
+      --lr-locale-picker-trigger-hover-border-color,
+      var(--lr-locale-picker-trigger-border-color, var(--lr-color-border))
+    );
+  }
+  :host([appearance='filled']) :where([part='trigger']):active:where(:not(:disabled)),
+  :host([appearance='filled-outlined']) :where([part='trigger']):active:where(:not(:disabled)) {
+    background: ${activeFill('var(--lr-locale-picker-trigger-hover-bg, var(--lr-color-brand-quiet))')};
+  }
+  /* The loud fill has no quieter tint to move to, so it shifts toward the theme mix partner. */
+  :host([appearance='accent']) :where([part='trigger']):hover:where(:not(:disabled)) {
+    background: var(--lr-locale-picker-trigger-hover-bg, ${hoverFill('var(--lr-locale-picker-trigger-fill, var(--lr-color-brand))')});
+    border-color: var(
+      --lr-locale-picker-trigger-hover-border-color,
+      var(--lr-locale-picker-trigger-border-color, transparent)
+    );
+  }
+  :host([appearance='accent']) :where([part='trigger']):active:where(:not(:disabled)) {
+    background: ${activeFill('var(--lr-locale-picker-trigger-hover-bg, var(--lr-locale-picker-trigger-fill, var(--lr-color-brand)))')};
+  }
+  :host([appearance='plain']) :where([part='trigger']):hover:where(:not(:disabled)) {
+    background: var(--_lr-locale-picker-plain-hover-fill);
+    border-color: var(--_lr-locale-picker-plain-hover-edge);
+  }
+  :host([appearance='plain']) :where([part='trigger']):active:where(:not(:disabled)) {
+    background: var(--_lr-locale-picker-plain-active-fill);
   }
   :host([open]) [part='trigger'] {
     border-color: var(--lr-locale-picker-open-border-color, var(--lr-color-brand));
