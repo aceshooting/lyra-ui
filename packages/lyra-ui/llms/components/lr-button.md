@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 9 parts, 41 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 42 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `base`: `--lr-button-gap`, `--lr-button-outlined-fill`, `--lr-button-padding-block`, `--lr-button-shadow`; `end`: `--lr-button-label-grow`; `label`: `--lr-button-label-grow`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -256,6 +256,9 @@ hover and press. For removed historical tokens, see the [release history archive
 own width; override it to `auto` for a compact inline composition. `appearance="link"` shrinks to
 its text by default but honours an explicitly set `--lr-button-width`, so a full-width link-look
 row is `style="inline-size: 100%; --lr-button-width: 100%"` on the host.
+
+`--lr-button-min-inline-size` (default `0`) floors the internal button's inline size and grows the
+host with it, so a short "Cancel" and a longer "Save" can share one width (for example `8rem`).
 
 `--lr-button-line-height` (default `inherit`) sets the internal button's line height in every
 appearance. For `appearance="link"`, `--lr-button-link-text-decoration` (default `underline`) is the

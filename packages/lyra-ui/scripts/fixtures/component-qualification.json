@@ -7375,6 +7375,7 @@
           "src/components/forms/button/button-label-layout.test.ts",
           "src/components/forms/button/button-link-line-tokens.test.ts",
           "src/components/forms/button/button-loading.test.ts",
+          "src/components/forms/button/button-min-inline-size.test.ts",
           "src/components/forms/button/button-remediation.test.ts",
           "src/components/forms/button/button-state-restoration.test.ts",
           "src/components/forms/button/button-w13-label-wrap.test.ts",
@@ -17831,6 +17832,7 @@
           "src/components/forms/date-picker/date-input-rendering-a11y.test.ts",
           "src/components/forms/date-picker/date-input-top-layer.test.ts",
           "src/components/forms/date-picker/date-input.test.ts",
+          "src/components/forms/date-picker/date-picker-frame.test.ts",
           "src/components/forms/date-picker/date-picker-nullish-projections.test.ts",
           "src/components/forms/date-picker/date-picker-readonly-periods.test.ts",
           "src/components/forms/date-picker/date-picker-remediation.test.ts",
@@ -17873,6 +17875,12 @@
           "applicability": "applicable",
           "status": "automated",
           "evidence": [
+            {
+              "file": "src/components/forms/date-picker/date-picker-frame.test.ts",
+              "test": "a plain picker passes axe",
+              "target": "el",
+              "state": "populated"
+            },
             {
               "file": "src/components/forms/date-picker/date-picker-readonly-periods.test.ts",
               "test": "keeps ${view} navigable without changing the selection, then permits editing after unlock",
@@ -18049,6 +18057,7 @@
           "src/components/forms/date-picker/date-input-rendering-a11y.test.ts",
           "src/components/forms/date-picker/date-input-top-layer.test.ts",
           "src/components/forms/date-picker/date-input.test.ts",
+          "src/components/forms/date-picker/date-picker-frame.test.ts",
           "src/components/forms/date-picker/date-picker-nullish-projections.test.ts",
           "src/components/forms/date-picker/date-picker-readonly-periods.test.ts",
           "src/components/forms/date-picker/date-picker-remediation.test.ts",
@@ -21109,7 +21118,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1160,
+              "line": 1202,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -21156,6 +21165,7 @@
           "src/components/overlays/overlay/overlay.test.ts",
           "src/components/overlays/overlay/popover-dom-boundary.test.ts",
           "src/components/overlays/overlay/popover-hover-card.test.ts",
+          "src/components/overlays/overlay/popover-return-focus.test.ts",
           "src/components/overlays/overlay/popover-reveal-barrier.test.ts",
           "src/components/overlays/overlay/popover-sizing-tokens.test.ts",
           "src/components/overlays/overlay/popover-trigger.test.ts",
@@ -29379,8 +29389,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/utility/icon/icon.test.ts",
-              "test": "flips physically, identically in LTR and RTL",
+              "file": "src/components/utility/icon/icon-flip-rtl.test.ts",
+              "test": "mirrors on the x axis only under an inherited right-to-left direction",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -29505,6 +29515,7 @@
         "tests": [
           "src/components/utility/icon/dompurify-loader.test.ts",
           "src/components/utility/icon/icon-defaults-sprite.test.ts",
+          "src/components/utility/icon/icon-flip-rtl.test.ts",
           "src/components/utility/icon/icon-library-bootstrap.property.test.ts",
           "src/components/utility/icon/icon-library-bootstrap.test.ts",
           "src/components/utility/icon/icon-library-font-awesome.property.test.ts",
@@ -35017,6 +35028,7 @@
           "src/components/conversation/markdown/markdown-code-chrome.test.ts",
           "src/components/conversation/markdown/markdown-code-copy-reentry.test.ts",
           "src/components/conversation/markdown/markdown-code-header.test.ts",
+          "src/components/conversation/markdown/markdown-color-border-tokens.test.ts",
           "src/components/conversation/markdown/markdown-content-state.test.ts",
           "src/components/conversation/markdown/markdown-core.test.ts",
           "src/components/conversation/markdown/markdown-direction.test.ts",
@@ -35252,6 +35264,7 @@
           "src/components/conversation/markdown/markdown-code-chrome.test.ts",
           "src/components/conversation/markdown/markdown-code-copy-reentry.test.ts",
           "src/components/conversation/markdown/markdown-code-header.test.ts",
+          "src/components/conversation/markdown/markdown-color-border-tokens.test.ts",
           "src/components/conversation/markdown/markdown-content-state.test.ts",
           "src/components/conversation/markdown/markdown-core.test.ts",
           "src/components/conversation/markdown/markdown-direction.test.ts",
@@ -44133,7 +44146,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1160,
+              "line": 1202,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -44180,6 +44193,7 @@
           "src/components/overlays/overlay/overlay.test.ts",
           "src/components/overlays/overlay/popover-dom-boundary.test.ts",
           "src/components/overlays/overlay/popover-hover-card.test.ts",
+          "src/components/overlays/overlay/popover-return-focus.test.ts",
           "src/components/overlays/overlay/popover-reveal-barrier.test.ts",
           "src/components/overlays/overlay/popover-sizing-tokens.test.ts",
           "src/components/overlays/overlay/popover-trigger.test.ts",
@@ -48290,6 +48304,12 @@
               "state": "populated"
             },
             {
+              "file": "src/components/layout/reorder-list/reorder-list-locked.test.ts",
+              "test": "passes axe with locked rows",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/layout/reorder-list/reorder-list.test.ts",
               "test": "is accessible in a populated state",
               "target": "el",
@@ -48395,7 +48415,7 @@
           "evidence": [
             {
               "file": "src/components/layout/reorder-list/reorder-list.class.ts",
-              "line": 374,
+              "line": 398,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -48435,6 +48455,7 @@
           "src/components/layout/reorder-list/reorder-item-composition.test.ts",
           "src/components/layout/reorder-list/reorder-item.test.ts",
           "src/components/layout/reorder-list/reorder-list-coverage.test.ts",
+          "src/components/layout/reorder-list/reorder-list-locked.test.ts",
           "src/components/layout/reorder-list/reorder-list-move-guards.test.ts",
           "src/components/layout/reorder-list/reorder-list-nested-controls.test.ts",
           "src/components/layout/reorder-list/reorder-list-remediation.test.ts",
@@ -48489,6 +48510,12 @@
               "state": "populated"
             },
             {
+              "file": "src/components/layout/reorder-list/reorder-list-locked.test.ts",
+              "test": "passes axe with locked rows",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/layout/reorder-list/reorder-list.test.ts",
               "test": "is accessible in a populated state",
               "target": "el",
@@ -48594,7 +48621,7 @@
           "evidence": [
             {
               "file": "src/components/layout/reorder-list/reorder-list.class.ts",
-              "line": 374,
+              "line": 398,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -48634,6 +48661,7 @@
           "src/components/layout/reorder-list/reorder-item-composition.test.ts",
           "src/components/layout/reorder-list/reorder-item.test.ts",
           "src/components/layout/reorder-list/reorder-list-coverage.test.ts",
+          "src/components/layout/reorder-list/reorder-list-locked.test.ts",
           "src/components/layout/reorder-list/reorder-list-move-guards.test.ts",
           "src/components/layout/reorder-list/reorder-list-nested-controls.test.ts",
           "src/components/layout/reorder-list/reorder-list-remediation.test.ts",
@@ -63379,7 +63407,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1160,
+              "line": 1202,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -63426,6 +63454,7 @@
           "src/components/overlays/overlay/overlay.test.ts",
           "src/components/overlays/overlay/popover-dom-boundary.test.ts",
           "src/components/overlays/overlay/popover-hover-card.test.ts",
+          "src/components/overlays/overlay/popover-return-focus.test.ts",
           "src/components/overlays/overlay/popover-reveal-barrier.test.ts",
           "src/components/overlays/overlay/popover-sizing-tokens.test.ts",
           "src/components/overlays/overlay/popover-trigger.test.ts",

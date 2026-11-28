@@ -13235,6 +13235,12 @@
             "default": "var(--lr-badge-tint)"
           },
           {
+            "name": "--lr-badge-font-family",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
             "name": "--lr-badge-font-size",
             "deprecated": null,
             "hasDefault": true,
@@ -19068,6 +19074,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-form-control-height)"
+          },
+          {
+            "name": "--lr-button-min-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
           },
           {
             "name": "--lr-button-on-fill",
@@ -50801,6 +50813,16 @@
             "default": ""
           },
           {
+            "name": "frame",
+            "property": "frame",
+            "type": "LyraFrame",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "card"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -51069,6 +51091,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "frame",
+            "attribute": "frame",
+            "type": "LyraFrame",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "card"
           },
           {
             "name": "isDateDisabled",
@@ -51546,6 +51578,18 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-date-picker-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-date-picker-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
+          },
+          {
             "name": "--lr-date-picker-cell-size",
             "deprecated": null,
             "hasDefault": true,
@@ -51604,6 +51648,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-date-picker-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
           },
           {
             "name": "--lr-date-picker-preset-hover-bg",
@@ -60430,7 +60480,14 @@
             "name": "show",
             "overloads": [
               {
-                "parameters": [],
+                "parameters": [
+                  {
+                    "name": "options",
+                    "type": "{ returnFocusTo?: HTMLElement | null }",
+                    "optional": true,
+                    "hasDefault": false
+                  }
+                ],
                 "returnType": "Promise<void>"
               }
             ]
@@ -96668,6 +96725,18 @@
             "default": "var(--lr-markdown-code-bg, var(--lr-color-brand-quiet))"
           },
           {
+            "name": "--lr-markdown-code-block-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border-subtle)"
+          },
+          {
+            "name": "--lr-markdown-code-block-border-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "0 (plain block) | var(--lr-border-width-thin) (framed block)"
+          },
+          {
             "name": "--lr-markdown-code-block-font-size",
             "deprecated": null,
             "hasDefault": true,
@@ -96690,6 +96759,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-radius)"
+          },
+          {
+            "name": "--lr-markdown-code-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
           },
           {
             "name": "--lr-markdown-code-copy-active-bg",
@@ -96803,6 +96878,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-size-1em)"
+          },
+          {
+            "name": "--lr-markdown-heading-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
           },
           {
             "name": "--lr-markdown-heading-font-weight",
@@ -97677,6 +97758,18 @@
             "default": "var(--lr-markdown-code-bg, var(--lr-color-brand-quiet))"
           },
           {
+            "name": "--lr-markdown-code-block-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border-subtle)"
+          },
+          {
+            "name": "--lr-markdown-code-block-border-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "0 (plain block) | var(--lr-border-width-thin) (framed block)"
+          },
+          {
             "name": "--lr-markdown-code-block-font-size",
             "deprecated": null,
             "hasDefault": true,
@@ -97699,6 +97792,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-radius)"
+          },
+          {
+            "name": "--lr-markdown-code-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
           },
           {
             "name": "--lr-markdown-code-copy-active-bg",
@@ -97812,6 +97911,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-size-1em)"
+          },
+          {
+            "name": "--lr-markdown-heading-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
           },
           {
             "name": "--lr-markdown-heading-font-weight",
@@ -122088,6 +122193,16 @@
             "default": "fixed"
           },
           {
+            "name": "returnFocusTo",
+            "attribute": null,
+            "type": "HTMLElement | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
             "name": "showDelay",
             "attribute": "show-delay",
             "type": "number",
@@ -122332,7 +122447,14 @@
             "name": "show",
             "overloads": [
               {
-                "parameters": [],
+                "parameters": [
+                  {
+                    "name": "options",
+                    "type": "{ returnFocusTo?: HTMLElement | null }",
+                    "optional": true,
+                    "hasDefault": false
+                  }
+                ],
                 "returnType": "Promise<void>"
               }
             ]
@@ -133832,6 +133954,16 @@
             "default": ""
           },
           {
+            "name": "locked",
+            "property": "locked",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "value",
             "property": "value",
             "type": "string",
@@ -133889,6 +134021,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "locked",
+            "attribute": "locked",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "pending",
@@ -157863,6 +158005,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-badge-tint)"
+          },
+          {
+            "name": "--lr-badge-font-family",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
           },
           {
             "name": "--lr-badge-font-size",
