@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 24 parts, 57 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 24 parts, 61 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `code-block`: `--lr-code-block-tab-size`, `--lr-markdown-code-bg`, `--lr-markdown-code-block-font-size`, `--lr-markdown-code-block-line-height`, `--lr-markdown-code-block-padding`, `--lr-markdown-code-block-radius`; `content`: `--lr-markdown-font-mono`, `--lr-markdown-max-height`; `table`: `--lr-markdown-table-header-bg`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
@@ -110,7 +110,7 @@ tokens (`--lr-markdown-block-gap`, `--lr-markdown-heading-margin-block-start`,
 `--lr-markdown-heading-1-font-size`,
 `--lr-markdown-heading-2-font-size`, `--lr-markdown-heading-3-font-size`,
 `--lr-markdown-heading-4-font-size`,
-`--lr-markdown-heading-font-weight`, `--lr-markdown-link-color`, `--lr-markdown-link-hover-color`,
+`--lr-markdown-heading-font-weight`, `--lr-markdown-heading-color` (default `inherit`, so headings take the content colour), `--lr-markdown-code-color` (inline `code` text colour, default `inherit`), `--lr-markdown-code-block-border-color` (default `var(--lr-color-border-subtle)`) and `--lr-markdown-code-block-border-width` (default `0` on the plain fenced block, `var(--lr-border-width-thin)` on the framed block with a header), `--lr-markdown-link-color`, `--lr-markdown-link-hover-color`,
 `--lr-markdown-blockquote-border-color`, `--lr-markdown-blockquote-color`,
 `--lr-markdown-list-indent`).
 `--lr-markdown-max-height` (default `none` — cap on `[part="content"]`'s block size; the

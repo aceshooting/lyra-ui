@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 26 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 27 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `dot`: `--lr-badge-dot-color`, `--lr-badge-dot-size`; `end`: `--lr-badge-gap`; `start`: `--lr-badge-gap`
 - **Documented with** `lr-tag` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
@@ -152,7 +152,7 @@ _Surface — what `appearance` routes onto the box_: `--lr-badge-fill` (default
 palette.
 
 _Density and shape:_ `--lr-badge-font-size` (default `var(--lr-font-size-sm)`),
-`--lr-badge-font-weight` (default `var(--lr-font-weight-medium)`) and `--lr-badge-line-height` (default `var(--lr-line-height-compact)`) set the label's weight and line height; `--lr-badge-padding-inline` (default `var(--lr-space-s)`) and `--lr-badge-min-height` (default
+`--lr-badge-font-family` (default `inherit`; shared by `lr-tag`, e.g. `var(--lr-font-mono)` for version tags) sets the label font family, `--lr-badge-font-weight` (default `var(--lr-font-weight-medium)`) and `--lr-badge-line-height` (default `var(--lr-line-height-compact)`) set the label's weight and line height; `--lr-badge-padding-inline` (default `var(--lr-space-s)`) and `--lr-badge-min-height` (default
 `var(--lr-size-1-25rem)`) — the trio each private effective-size rule rewrites to that step's font size,
 inline padding and minimum block size; the `m` defaults above exactly reproduce the pre-`size` fixed
 badge treatment. `--lr-badge-gap` (default `var(--lr-space-2xs)`) is the space between

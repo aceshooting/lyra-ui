@@ -9,6 +9,6 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 9 parts, 28 custom properties — see `lr-badge.md`
+- **Themeable via** 9 parts, 29 custom properties — see `lr-badge.md`
 - **Documented with** `lr-badge`: see [lr-badge.md](./lr-badge.md).
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
