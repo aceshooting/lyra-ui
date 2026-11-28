@@ -155,7 +155,9 @@ sizing), `--lr-focus-ring-*`, `--lr-transition-fast`.
 **Safe-URL checking.** `src` is validated by internal sink-specific helpers before it's
 ever assigned to an `<img>`/`<video>` `src` or an `<a href>` — only `http:`/`https:`/`blob:` (plus
 `data:` for a _media_ `src` only) or a scheme-relative/relative URL with no scheme at all pass;
-anything else (`javascript:`, `vbscript:`, and similarly suspicious schemes) is rejected. `data:` is
+anything else (`javascript:`, `vbscript:`, and similarly suspicious schemes) is rejected. A media
+`src` on the page's own custom-scheme origin (`app://host/...` when `location.origin` is
+`app://host`) also passes; links and downloads do not widen. `data:` is
 allowed for a media source (a browser never executes script from a media element's `src`) but
 rejected by the stricter link validator (a `data:text/html` URI navigated to via a clicked `<a
 href>` runs as a full document and can execute script) — the same scheme gets a different verdict

@@ -154,8 +154,8 @@ Application and OS reduced motion still take precedence; persist Shine independe
 See the composition guide for the controlled picker and preference wiring.
 
 The four separate topbar controls—gemstone, mode, design, language—stay square `2.75rem` targets
-(44px at a 16px root), with localized names and tooltips. Use gemstone, sun/moon and horizontal-slider
-icons, and a country flag for language. Dense gemstone options do not reduce
+(44px at a 16px root), with localized names and tooltips. Use the built-in `gem`, `sun`/`moon` (`monitor` for System) and `sliders-horizontal`
+`<lr-icon>` glyphs, and a country flag for language. Dense gemstone options do not reduce
 those launcher targets. Size icon launchers through their tokens and keep their glyphs bounded:
 
 ```css
@@ -169,8 +169,10 @@ square of that size; a `::part(button)` size rule adds nothing. `--lr-icon-size`
 `appearance-launcher` to each `lr-icon-button`, including buttons slotted through a popover.
 Keep the mode action separate from the design fields. Set the locale picker's
 `--lr-locale-picker-trigger-height: 2.75rem`; its flag-only trigger is then a square of that height,
-so it needs no `::part(trigger)` rule either. Use that public flag-only trigger with readable menu
-entries:
+so it needs no `::part(trigger)` rule either. Set `appearance="plain"` on it so its rest, hover,
+press and focus ring match the plain icon buttons beside it, giving the four launchers one resting
+look; the default `outlined` trigger would be the only bordered one. Use that public flag-only
+trigger with readable menu entries:
 
 ```ts
 import '@aceshooting/lyra-ui/components/lr-locale-picker.js';
@@ -178,7 +180,7 @@ import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';
 ```
 
 ```html
-<lr-locale-picker top-layer trigger-display="flag" option-display="label"
+<lr-locale-picker top-layer appearance="plain" trigger-display="flag" option-display="label"
   aria-label="Localized language action"></lr-locale-picker>
 ```
 
@@ -1158,16 +1160,38 @@ Serve the package's `@aceshooting/lyra-ui/theme-bootstrap.js` asset at the scrip
 Keep it synchronous, before stylesheets; no import of the full `theme.js` runtime is required.
 For server-generated inline scripts, use `createLyraThemeBootstrap({ restore: 'mode' })`.
 `restore: 'all'` is the default and retains whole-profile restoration. A valid script attribute
-(`all` or `mode`) overrides the factory option; an absent or invalid attribute keeps that option.
+overrides the factory option; an absent or invalid attribute keeps that option.
 The existing `data-lr-theme-storage-key` and `data-lr-theme-attributes` configuration also applies.
+
+**Per-axis restoration.** To fix some axes and let users choose others, list the restored axes:
+`data-lr-theme-restore="mode accent"` (space-separated) or
+`createLyraThemeBootstrap({ restore: ['mode', 'accent'] })`. The axes are `mode`, `look`,
+`surface`, `density` and `accent`; `look` also carries a runtime look's tokens and `overrides`,
+`surface` carries `surfaceOpacity`, and `accent` carries `accentBackground`. A listed axis is
+restored from the saved profile and uses its built-in default when nothing is saved, as `all`
+does. An unlisted axis is host-owned: the bootstrap never writes its attribute or inline styles,
+even on a clean profile, and an unlisted mode leaves `data-lr-mode` and the resolved-mode attributes
+to the host while restored accents paint for the host's `data-lr-mode`. Unknown tokens are
+ignored; a value with no known axis keeps the factory policy (the factory itself falls back to
+`all`). `all` and `mode` behave exactly as before.
+
+~~~html
+<html data-lr-look="shadcn" data-lr-surface="solid" data-lr-density="compact">
+  <head>
+    <meta charset="utf-8" />
+    <script src="/theme-bootstrap.js" data-lr-theme-restore="mode accent"></script>
+    <link rel="stylesheet" href="/theme.css" />
+  </head>
+</html>
+~~~
 
 Mode-only restoration ignores saved visual axes and token maps without changing the saved record.
 Missing, invalid, or inaccessible saved mode defaults to System, resolved against the current
 `prefers-color-scheme` before paint. Legacy `auto` maps to System; saved `unset` leaves mode
 selection unset and clears the configured resolved-mode attributes. The bootstrap applies an
 initial snapshot; it does not install a live system-mode listener. This option configures only
-the bootstrap. Later runtime calls such as `setLyraStyle()` follow their own style and persistence
-policy, so choose that policy explicitly if the application initializes the runtime afterward.
+the bootstrap; pass the same policy to `startLyraStyle({ restore })` when the application starts
+the runtime afterward, so later runtime applies keep off the host-owned axes.
 
 **Starting the runtime after the bootstrap — `startLyraStyle()`.** A page that inlines only the
 bootstrap and loads `theme.js` later in a deferred bundle calls `startLyraStyle()` once. It adopts
@@ -1185,10 +1209,39 @@ import { startLyraStyle } from "@aceshooting/lyra-ui/theme.js";
 startLyraStyle(); // adopts the saved style, follows the OS while mode is System, never writes
 ~~~
 
-`startLyraStyle()` always reads the runtime's own `localStorage['lyra-theme']` record and applies
-the whole profile in it. A page whose bootstrap uses `data-lr-theme-restore="mode"` or an
-application-owned storage key does not pair with it: the start would apply axes or a record the
-bootstrap deliberately ignored. Such pages call `setLyraStyle()` with the policy they want.
+`startLyraStyle()` always reads the runtime's own `localStorage['lyra-theme']` record. Without
+options it applies the whole profile in it. A page whose bootstrap restores only some axes passes
+the same policy, `startLyraStyle({ restore: ['mode', 'accent'] })`: this start and every later
+root apply -- `setLyraStyle()`, `resetLyraStyle()`, `lr-style-panel` and operating-system mode
+flips -- then write only those axes, leaving the host's attributes and inline styles alone, while
+storage still keeps the whole profile. Show the matching axes in the panel
+(`<lr-style-panel axes="mode accent">`). Unknown entries are ignored, a policy without a known
+axis restores everything, and each call replaces the previous policy. A page whose bootstrap uses
+an application-owned storage key does not pair with it; it calls `setLyraStyle()` with the policy
+it wants.
+
+**Bundling the classic asset with Vite.** A `<script src>` pointing into the package is not
+served by Vite and warns that a classic script cannot be bundled. The Node-only plugin at
+`@aceshooting/lyra-ui/vite/theme-bootstrap.js` inserts the tag right after `<meta charset>`,
+serves the asset during development and emits it into the build below `base`. Its
+`storageKey`, `restore` and `modeAttributes` options become the tag's `data-lr-theme-*`
+attributes; `fileName` (default `lyra-theme-bootstrap.js`) names the public file. Vite is not a
+dependency of this package; import the plugin only from the Vite configuration.
+
+~~~ts
+// vite.config.ts
+import { defineConfig } from "vite";
+import { lyraThemeBootstrapPlugin } from "@aceshooting/lyra-ui/vite/theme-bootstrap.js";
+
+export default defineConfig({
+  plugins: [lyraThemeBootstrapPlugin({ restore: ["mode", "accent"] })],
+});
+~~~
+
+Other bundlers: copy `node_modules/@aceshooting/lyra-ui/dist/theme/theme-bootstrap.js` into the
+static `public/` directory as part of the build (re-copy on every package upgrade), then reference
+it by hand after the charset declaration:
+`<script src="/theme-bootstrap.js" data-lr-theme-restore="mode accent"></script>`.
 
 ### Invalidating canvas theme values
 

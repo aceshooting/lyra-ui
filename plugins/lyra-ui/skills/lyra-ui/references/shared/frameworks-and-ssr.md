@@ -23,6 +23,13 @@ installing or shipping a wrapper; import the normal granular registration entry 
   onto every element it manages, its dev builds add `ng-reflect-*` input reflections and
   `ng-version`, and Vue's scoped styles add `data-v-*` — none of these trigger the unknown-attribute
   warning. A genuinely misspelled or unsupported attribute still warns.
+- **Desktop shells on a custom scheme.** Every component that loads a `src`/`image` or fetches a
+  remote resource accepts relative URLs plus `http:`, `https:`, `blob:` and `data:`. A page served
+  from its own scheme (for example a privileged `app://host/`, where bundler asset URLs become
+  `app://host/assets/x.svg`) may also use absolute URLs on exactly its own origin — same scheme,
+  host and port as `location`, and only when that origin is not opaque (`null`). Another host,
+  port or scheme is still refused, links and downloads keep their narrower allowlists, and
+  `javascript:`, `vbscript:`, `file:` and `about:` never qualify, even as the page's own scheme.
 
 All three adapters use the generated `LyraComponentTypeMap` from
 `@aceshooting/lyra-ui/framework-types`. Its per-tag entries contain the element type, writable
