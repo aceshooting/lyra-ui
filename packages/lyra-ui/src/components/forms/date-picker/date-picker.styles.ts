@@ -64,10 +64,19 @@ export const styles = css`
        narrower, wrapping the second month onto its own line beats overflowing the allocation. */
     flex-wrap: wrap;
     gap: var(--lr-date-picker-month-gap, var(--_lr-date-picker-month-gap));
-    padding: var(--lr-space-s);
-    background: var(--lr-color-surface);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    padding: var(--lr-date-picker-padding, var(--lr-space-s));
+    background: var(--lr-date-picker-bg, var(--lr-color-surface));
+    border: var(--lr-border-width-thin) solid var(--lr-date-picker-border-color, var(--lr-color-border));
     border-radius: var(--lr-date-picker-radius, var(--_lr-date-picker-radius));
+  }
+  /* frame='plain' dissolves the container into whatever frames it (a popover, a card, a drawer),
+     so only one frame is drawn. It still reads --lr-date-picker-padding, with its own 0 fallback;
+     the background and border tokens are card chrome and stay unpainted. */
+  :host([frame='plain']) [part~="base"] {
+    padding: var(--lr-date-picker-padding, 0);
+    background: transparent;
+    border: none;
+    border-radius: inherit;
   }
   [part~="date-picker"] {
     min-inline-size: 0;

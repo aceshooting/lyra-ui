@@ -1861,6 +1861,10 @@ Inline month-grid calendar, not form-associated (used standalone or embedded ins
 'thu'|'fri'|'sat'`; attribute
   `first-day-of-week`, reflected)
 - `focusedDate: string = ''` (attribute `focused-date`, reflected)
+- `frame: LyraFrame = 'card'` (reflected) — container treatment. `card` keeps the padded, filled,
+  bordered calendar surface; `plain` removes the background and border, inherits the host's corner
+  radius and drops the padding (still settable through `--lr-date-picker-padding`), so a picker
+  placed in a surface that already frames it (`lr-popover`, a card, a drawer) draws one frame.
 - `isDateDisabled?: (date: Date) => boolean` (JS only)
 - `locale: string = ''` (reflected; malformed tags fall back to the platform locale)
 - `max: string = ''` and `min: string = ''` (reflected ISO bounds)
@@ -1945,6 +1949,10 @@ while its range is the current value),
 **Themeable custom properties:** `--lr-date-picker-cell-size` (default `2.25rem`, controls
 day-cell/grid-column size; its private default follows the `size` tier — `2xs`/`xs`/`s`/`l`/`xl`;
 `m` keeps the default). An inherited or direct public value remains authoritative in every tier.
+`--lr-date-picker-padding` (default `var(--lr-space-s)`; `frame="plain"` falls back to `0`),
+`--lr-date-picker-bg` (default `var(--lr-color-surface)`) and `--lr-date-picker-border-color`
+(default `var(--lr-color-border)`) style the `[part="base"]` calendar surface; `frame="plain"`
+paints neither the background nor the border.
 
 More themeable custom properties: `--lr-form-control-label-line-height` (default `inherit`): Line
 height of the field label.

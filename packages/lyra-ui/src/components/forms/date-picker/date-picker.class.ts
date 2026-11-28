@@ -32,7 +32,7 @@ import {
 import { dispatchNativeInputEvent } from '../../../internal/native-event-relay.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
-import type { LyraSize } from '../../../internal/variants.js';
+import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
 import { styles } from './date-picker.styles.js';
 import {
   isSafeArray,
@@ -343,6 +343,12 @@ function canonicalDateRangePresets(
  * @cssprop [--lr-date-picker-month-gap=var(--lr-space-l)] - Gap between visible months.
  * @cssprop [--lr-date-picker-header-gap=var(--lr-space-s)] - Month-header child gap.
  * @cssprop [--lr-date-picker-radius=var(--lr-radius)] - Calendar and control corner radius.
+ * @cssprop [--lr-date-picker-padding=var(--lr-space-s)] - Padding of the calendar surface
+ *   (`[part="base"]`). `frame="plain"` reads it too, with `0` as its fallback.
+ * @cssprop [--lr-date-picker-bg=var(--lr-color-surface)] - Background of the calendar surface.
+ *   `frame="plain"` still paints transparent.
+ * @cssprop [--lr-date-picker-border-color=var(--lr-color-border)] - Border color of the calendar
+ *   surface. `frame="plain"` draws no border.
  * @cssprop [--lr-date-picker-nav-hover-bg=var(--lr-color-brand-quiet)] - Hover background of the
  *   `[part="previous"]`/`[part="next"]` month-navigation buttons.
  * @cssprop [--lr-date-picker-nav-active-bg=color-mix(in oklab, var(--lr-date-picker-nav-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Pressed month-navigation background.
@@ -427,6 +433,12 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
    *  `small`/`medium`/`large` are accepted for `s`/`m`/`l`, so a migration is a tag rename with no
    *  attribute rewrite. */
   @property({ reflect: true }) size: LyraSize = 'm';
+  /** Container treatment — the shared `frame` vocabulary, not a fill. `'card'` (the default) keeps
+   *  the padded, filled, bordered calendar surface; `'plain'` removes the background and border,
+   *  inherits the host's corner radius and drops the padding (still settable through
+   *  `--lr-date-picker-padding`), for a picker placed inside a surface that already frames it, such
+   *  as an `lr-popover`, a card or a drawer, so only one frame is drawn. */
+  @property({ reflect: true }) frame: LyraFrame = 'card';
   @property({ reflect: true }) override locale = '';
   /** First weekday column: `sun`..`sat`, or `auto` to follow the effective locale. */
   @property({ attribute: 'first-day-of-week', reflect: true })

@@ -117,6 +117,24 @@ export const Localized: Story = {
 /** `size` scales calendar cell density proportionally — `2xs`–`xl` range, default `m`.
  * Unlike `lr-input`'s row-height scale (rows are text containers), this scales cell
  * density itself (fewer/more days per visual unit); neither label nor nav buttons rescale. */
+export const PlainFrameInPopover: Story = {
+  name: 'Plain frame inside a popover',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`frame="plain"` drops the calendar\'s own background, border and padding so a surface that already frames it, here an `lr-popover`, draws the only frame. `--lr-date-picker-padding`, `--lr-date-picker-bg` and `--lr-date-picker-border-color` restyle the default `card` frame.',
+      },
+    },
+  },
+  render: (_args, context) => html`
+    <lr-popover .open=${context.viewMode !== 'docs'} placement="bottom-start">
+      <button slot="trigger">Pick a date</button>
+      <lr-date-picker frame="plain" aria-label="Departure date" value="2026-07-15"></lr-date-picker>
+    </lr-popover>
+  `,
+};
+
 export const Sizes: Story = {
   render: () => {
     const sizes: LyraSizeStep[] = ["2xs", "xs", "s", "m", "l", "xl"];
