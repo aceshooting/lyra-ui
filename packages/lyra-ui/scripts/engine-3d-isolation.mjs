@@ -15,7 +15,7 @@ const lazyOnly = (specifier) =>
  * Reviewed Node-only tooling exports, keyed by export specifier. They never load in a browser, so
  * the browser graph neither resolves their `node:` built-ins nor needs to prove their 3D isolation.
  */
-export const NODE_TOOLING_EXPORTS = Object.freeze({
+const NODE_TOOLING_EXPORTS = Object.freeze({
   './vite/theme-bootstrap.js': 'Vite plugin that reads the classic bootstrap asset with node:fs; loaded only by a Vite configuration',
 });
 

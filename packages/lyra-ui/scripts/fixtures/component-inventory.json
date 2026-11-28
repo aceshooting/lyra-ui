@@ -59383,6 +59383,16 @@
             "default": "m"
           },
           {
+            "name": "without-announcements",
+            "property": "withoutAnnouncements",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "without-rejection-list",
             "property": "withoutRejectionList",
             "type": "boolean",
@@ -59561,6 +59571,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "withoutAnnouncements",
+            "attribute": "without-announcements",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "withoutRejectionList",

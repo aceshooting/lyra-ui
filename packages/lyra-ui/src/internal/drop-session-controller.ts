@@ -32,7 +32,7 @@ export interface DropSessionOptions {
 
 /** Whether a drag payload carries files: a `'Files'` entry in `types` (readable during
  *  dragenter/dragover), or a `kind === 'file'` item for a payload that exposes only `items`. */
-export function dragCarriesFiles(dataTransfer: DataTransfer | null | undefined): boolean {
+function dragCarriesFiles(dataTransfer: DataTransfer | null | undefined): boolean {
   if (!dataTransfer) return false;
   const types = dataTransfer.types as readonly string[] | undefined;
   if (types && Array.prototype.includes.call(types, 'Files')) return true;

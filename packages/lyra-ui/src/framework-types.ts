@@ -5608,6 +5608,7 @@ export interface LyraComponentTypeMap {
       | 'size'
       | 'strings'
       | 'target'
+      | 'withoutAnnouncements'
       | 'withoutRejectionList',
       {}
     >;
@@ -5633,6 +5634,7 @@ export interface LyraComponentTypeMap {
       'max-files'?: LyraDropZone['maxFiles'];
       'max-total-size'?: LyraDropZone['maxTotalSize'];
       'rejected-message'?: LyraDropZone['rejectedMessage'];
+      'without-announcements'?: LyraDropZone['withoutAnnouncements'];
       'without-rejection-list'?: LyraDropZone['withoutRejectionList'];
     };
   };
