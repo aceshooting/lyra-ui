@@ -129,8 +129,8 @@ export const EventTextColor: Story = {
       view-date="2026-07-01"
       .events=${[
         { date: '2026-07-14', title: 'Quiet fill', color: 'var(--lr-color-brand-quiet)' },
-        { date: '2026-07-15', title: 'Yellow fill', color: '#ffeb3b' },
-        { date: '2026-07-16', title: 'Pinned text', color: '#ffe4e6', textColor: '#9f1239' },
+        { date: '2026-07-15', title: 'Warning fill', color: 'var(--lr-color-warning-quiet)' },
+        { date: '2026-07-16', title: 'Pinned text', color: 'var(--lr-color-danger-quiet)', textColor: 'var(--lr-color-danger)' },
       ]}
     ></lr-calendar>
   `,
