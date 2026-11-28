@@ -11,9 +11,20 @@ const ENGINE_3D_LAZY_ONLY = Object.freeze(['@aceshooting/lyra-3d', 'three']);
 const lazyOnly = (specifier) =>
   ENGINE_3D_LAZY_ONLY.some((name) => specifier === name || specifier.startsWith(`${name}/`));
 
-/** Every JavaScript file a consumer can import through the package `exports` map, sorted. */
-export function javascriptExportTargets(exportsMap) {
+/**
+ * Reviewed Node-only tooling exports, keyed by export specifier. They never load in a browser, so
+ * the browser graph neither resolves their `node:` built-ins nor needs to prove their 3D isolation.
+ */
+export const NODE_TOOLING_EXPORTS = Object.freeze({
+  './vite/theme-bootstrap.js': 'Vite plugin that reads the classic bootstrap asset with node:fs; loaded only by a Vite configuration',
+});
+
+/** Every browser JavaScript file a consumer can import through the package `exports` map, sorted. */
+export function javascriptExportTargets(exportsMap, nodeTooling = NODE_TOOLING_EXPORTS) {
   const targets = new Set();
+  if (exportsMap && typeof exportsMap === 'object') {
+    exportsMap = Object.fromEntries(Object.entries(exportsMap).filter(([key]) => !Object.hasOwn(nodeTooling, key)));
+  }
   const visit = (value) => {
     if (typeof value === 'string') {
       if (/\.m?js$/u.test(value) && !value.includes('*')) targets.add(value.replace(/^\.\//u, ''));

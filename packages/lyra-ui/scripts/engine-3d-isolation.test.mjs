@@ -23,6 +23,14 @@ test('collects every JavaScript export target once', () => {
   }), ['dist/a.js', 'dist/cli/run.mjs', 'dist/lyra.js']);
 });
 
+test('skips reviewed Node-only tooling exports, which never join the browser graph', () => {
+  assert.deepEqual(javascriptExportTargets({
+    '.': './dist/lyra.js',
+    './vite/theme-bootstrap.js': { types: './dist/vite/theme-bootstrap.d.ts', default: './dist/vite/theme-bootstrap.js' },
+  }), ['dist/lyra.js']);
+  assert.deepEqual(javascriptExportTargets({ './tool.js': './dist/tool.js' }, { './tool.js': 'reason' }), []);
+});
+
 test('reports a static chain to the companion and ignores lazy imports', () => {
   const metafile = {
     inputs: {

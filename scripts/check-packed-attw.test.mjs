@@ -22,8 +22,9 @@ const manifest = JSON.parse(
 
 test('checks every live typed export while preserving blocked retired routes', () => {
   const entrypoints = attwEntrypoints(manifest);
-  assert.equal(entrypoints.length, 804, 'reviewed live typed exports, with locale catalogs published separately');
+  assert.equal(entrypoints.length, 805, 'reviewed live typed exports, with locale catalogs published separately');
   assert.ok(entrypoints.includes('.'));
+  assert.ok(entrypoints.includes('./vite/theme-bootstrap.js'), 'the Node-only Vite plugin types are checked');
   assert.ok(entrypoints.includes('./package.json'));
   assert.ok(entrypoints.includes('./theme/*'));
   assert.ok(entrypoints.includes('./theme/looks/shadcn.js'), 'current look routes remain checked');
