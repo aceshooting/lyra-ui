@@ -57,6 +57,12 @@ The format menu follows the [shared surface treatment](../shared/styles-and-toke
   LibreOffice, and Numbers already sniff UTF-8 correctly with or without it, so leaving this `false`
   changes nothing for them. Never applies to the built-in JSON download — RFC 8259 forbids a BOM
   there
+- `delimiter: ',' | ';' | '\t' | 'auto' = ','` — field separator of the built-in CSV download
+  (attribute `tab` also means a tab). `'auto'` is `';'` when the effective locale's decimal
+  separator is a comma, else `','`. A field containing the active delimiter, a quote, CR or LF is
+  quoted; formula guarding is unchanged. Never applies to JSON
+- `lineEnding: '\r\n' | '\n' = '\r\n'` (attribute `line-ending`, also `lf`/`crlf`) — CSV row
+  terminator
 - `formats: readonly LyraExportFormatOption[] = ['csv']` (attribute: false; shallow frozen
   snapshot; assigning the same array again is ignored), where
   `LyraExportFormatOption` is the built-in `LyraExportFormat = 'csv' | 'json'` or a
@@ -195,7 +201,7 @@ escapeCsvField, buildCsv, downloadBlob } from
 
 ```ts
 escapeCsvField(value: unknown): string   // quotes/escapes; neutralizes leading whitespace and ASCII/fullwidth =,+,-,@ formula prefixes with an apostrophe
-buildCsv(rows: readonly Readonly<Record<string, unknown>>[], columns: readonly LyraCsvColumn[], options?: LyraBuildCsvOptions): string  // CRLF-joined, header row included; options.bom prepends a UTF-8 byte-order mark
+buildCsv(rows: readonly Readonly<Record<string, unknown>>[], columns: readonly LyraCsvColumn[], options?: LyraBuildCsvOptions): string  // CRLF-joined, header row included; options.bom prepends a UTF-8 byte-order mark, options.delimiter / options.lineEnding override `,` / CRLF
 downloadBlob(content: string, filename: string, mime: string, ownerDocument?: Document): void // triggers a browser download in the supplied document realm
 ```
 

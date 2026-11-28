@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 59 parts, 64 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 61 parts, 64 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `base`: `--lr-table-border`, `--lr-theme-scrollbar-color`, `--lr-theme-scrollbar-gutter`, `--lr-theme-scrollbar-width`; `caption`: `--lr-table-caption-color`, `--lr-table-caption-font-size`, `--lr-table-caption-font-weight`, `--lr-table-caption-padding`, `--lr-table-caption-text-align`; `header-cell`: `--lr-table-header-sorted-bg`; `row`: `--lr-table-row-selected-bg`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
@@ -407,6 +407,23 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   pre-sort `rows` or use `sort-mode="server"`.
 - `groupLabel?: (key: string | number, rows: readonly T[]) => unknown` (attribute: false) — custom group
   header content; without it, the group key is rendered as text
+- `groupFooter?: boolean | ((groupKey: string | number, rows: readonly T[]) => Record<string, unknown> | null | undefined)`
+  (attribute: false; type `TableGroupFooter<T>`) — per-group subtotal rows, only with `groupBy`.
+  Unset (the default) renders none. `true` reuses each column's `footer(rows)` — and, with
+  `rowTotal`, `grandTotal(rows)` — with one group's rows (nothing renders when no column defines
+  `footer`); a callback returns that group's cells keyed by column key (missing key → empty cell,
+  row-total column empty) or `null`/`undefined` for no row. Content renders as returned, like
+  `footer(rows)`. `rows` is the group's contiguous run after filtering and client sorting,
+  ignoring pagination, so a split group is summarized whole and its row renders once after the
+  group's last row (and its expanded panel) on the page that holds it; sorting keeps it at the
+  group end. The row (`group-footer` / `group-footer-cell`) is `role="row"` with the localized
+  `tableRowTotal` role description, never selectable, focusable or counted, and — like the
+  `<tfoot>` — not in `viewRows`/`pageRows`, so not exported. Groups do not collapse.
+
+  ```js
+  table.groupBy = (r) => r.region;
+  table.groupFooter = (region, rows) => ({ amount: fmt.format(rows.reduce((s, r) => s + r.amount, 0)) });
+  ```
 - `expandedContent?: (row: T) => unknown` (attribute: false) — enables a leading expand toggle and
   renders a full-width detail row beneath expanded records. The visually empty toggle-column
   header has the localized accessible name `details` (overridable through `.strings`). The returned content renders inside
@@ -618,6 +635,7 @@ notice when the assigned row collection exceeds admission capacity), `cell`, `mo
 column defines `footer`), `footer-row`, `footer-cell`, `row-total-cell` (each body row's trailing
 `<td>` holding `rowTotal(row)`, rendered only when `rowTotal` is set — the corresponding footer-row
 cell, holding `grandTotal`, is a `footer-cell` instead, matching every other footer cell),
+`group-footer` and `group-footer-cell` (a group's subtotal row and its cells, only with `groupFooter`),
 `expand-toggle-cell`, `row-expand-toggle`,
 `row-expand-icon`, `expanded-row`, `expanded-cell`, `filter-label`, `filter`, `filter-clear`
 (clears the filter field, replacing the native search-cancel glyph the component resets; rendered
