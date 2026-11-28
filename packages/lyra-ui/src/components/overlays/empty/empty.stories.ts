@@ -111,3 +111,33 @@ export const AnnounceOnMount: Story = {
     </div>
   `,
 };
+
+export const FocusHeadingOnViewSwap: Story = {
+  name: 'Focus the heading after a view swap',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A router that replaces the screen moves focus to the new view\'s heading with `focusHeading()`. A slotted `<h1 slot="heading">` keeps its own semantics: the wrapper drops its heading role, so the heading is never nested in another heading or a paragraph.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-s); justify-items: start;">
+      <button
+        @click=${(event: Event) => {
+          const host = (event.currentTarget as HTMLElement).parentElement!;
+          host.querySelector('lr-empty')?.remove();
+          const empty = document.createElement('lr-empty');
+          empty.setAttribute('description', 'Nothing has been shared with you yet.');
+          const heading = document.createElement('h1');
+          heading.slot = 'heading';
+          heading.textContent = 'Shared with me';
+          empty.append(heading);
+          host.append(empty);
+          void empty.updateComplete.then(() => empty.focusHeading());
+        }}
+      >Open the shared view</button>
+    </div>
+  `,
+};

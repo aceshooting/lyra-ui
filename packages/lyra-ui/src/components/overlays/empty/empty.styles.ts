@@ -59,6 +59,9 @@ export const styles = css`
     font-size: var(--lr-empty-heading-font-size);
     color: var(--lr-empty-heading-color, var(--lr-color-text));
     margin: 0;
+    /* Only focusHeading() focuses this non-interactive tabindex="-1" wrapper, as lr-page does its
+       main landmark: the moved focus is announced, never painted. */
+    outline: none;
   }
   [part='heading'][hidden] {
     display: none;

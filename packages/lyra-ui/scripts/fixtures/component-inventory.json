@@ -63675,7 +63675,24 @@
           }
         ],
         "cssStates": [],
-        "methods": [],
+        "methods": [
+          {
+            "name": "focusHeading",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "options",
+                    "type": "FocusOptions",
+                    "optional": true,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "boolean"
+              }
+            ]
+          }
+        ],
         "staticProperties": [],
         "staticMethods": [],
         "moduleExports": [],

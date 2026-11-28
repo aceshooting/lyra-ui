@@ -1,4 +1,4 @@
-import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { html, isServer, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
@@ -30,7 +30,11 @@ import { styles } from './empty.styles.js';
  * rendered/accessibility-visible stay silent. A host `aria-label` names the host only and does not
  * replace visible heading/description text in the announcement sink. Property and rich-slot
  * headings default to semantic level 3; set `heading-level` from `1`–`6` to fit the surrounding
- * outline, or `none` for visual-only heading text.
+ * outline, or `none` for visual-only heading text. The heading wrapper is a neutral `<div>`: it
+ * carries `role="heading"` at that level, and drops it for `none` or when the `heading` slot holds
+ * its own heading element (`h1`–`h6` or `role="heading"`), so the slotted heading is never nested
+ * inside another heading or a paragraph. `focusHeading()` moves focus to the rendered heading, for
+ * a router or view swap that focuses the new screen's heading.
  *
  * Removing heading or description safely omits that text; explicit empty values remain empty and later values restore the corresponding content.
  *
@@ -42,7 +46,9 @@ import { styles } from './empty.styles.js';
  * @slot actions - Buttons/links shown below the description.
  * @csspart base - The outer container.
  * @csspart icon - The wrapper around the default-slotted icon/illustration.
- * @csspart heading - The heading paragraph (`role="heading"` at the configured level unless opted out).
+ * @csspart heading - The heading wrapper (`role="heading"` at the configured level unless opted out
+ *   or the `heading` slot holds its own heading element). Programmatic focus from `focusHeading()`
+ *   shows no outline on it.
  * @csspart description - The description paragraph.
  * @csspart actions - The wrapper around the `actions`-slotted content.
  * @cssprop [--lr-empty-padding=var(--lr-space-l)] - Padding used at the default density; accepts any
@@ -128,6 +134,7 @@ export class LyraEmpty extends LyraElement {
   private initialContentAnnounced = false;
   private announcementGeneration = 0;
   private lastAnnouncementText = '';
+  private slottedHeadingSemantics = false;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -196,24 +203,68 @@ export class LyraEmpty extends LyraElement {
     if (text) this.announcements.announcePolite(text);
   }
 
+  /** Elements assigned to the heading slot, flattened through forwarding slots. Before the first
+   *  render the slot does not exist yet, so the host's own direct `slot="heading"` children stand
+   *  in; a server render has no light DOM to read and keeps the configured level. */
+  private headingSlotElements(): Element[] {
+    if (isServer) return [];
+    const slot = this.shadowRoot?.querySelector<HTMLSlotElement>('slot[name="heading"]');
+    if (slot) return slot.assignedElements({ flatten: true });
+    return Array.from(this.children).filter((child) => child.getAttribute('slot') === 'heading');
+  }
+
+  private readonly onHeadingSlotChange = (): void => {
+    if (this.headingSlotHasSemantics() !== this.slottedHeadingSemantics) this.requestUpdate();
+  };
+
+  private headingSlotHasSemantics(): boolean {
+    return this.headingSlotElements().some(hasHeadingSemantics);
+  }
+
+  /**
+   * Moves focus to the rendered heading, for an app that focuses a new view's main heading after
+   * replacing a screen. A slotted heading element (`h1`–`h6` or `role="heading"`) receives focus
+   * itself; it gains `tabindex="-1"` only when it carries no `tabindex` and is not natively
+   * focusable. Otherwise the shadow heading wrapper (`part="heading"`) is focused, gaining a kept
+   * `tabindex="-1"` on the first call -- it never joins sequential Tab navigation, and its
+   * programmatic focus paints no outline. Returns `false`, moving no focus, when no heading is
+   * rendered or focus could not land (for example under an `inert` ancestor).
+   * @param options - Forwarded to `HTMLElement.focus()`, e.g. `{ preventScroll: true }`.
+   */
+  focusHeading(options?: FocusOptions): boolean {
+    const wrapper = this.shadowRoot?.querySelector<HTMLElement>('[part="heading"]');
+    if (!wrapper || wrapper.hidden) return false;
+    const slotted = this.headingSlotElements().find(hasHeadingSemantics);
+    if (slotted instanceof HTMLElement) {
+      if (!slotted.hasAttribute('tabindex') && slotted.tabIndex < 0) slotted.setAttribute('tabindex', '-1');
+      slotted.focus(options);
+      return slotted.matches(':focus');
+    }
+    if (!wrapper.hasAttribute('tabindex')) wrapper.setAttribute('tabindex', '-1');
+    wrapper.focus(options);
+    return this.shadowRoot?.activeElement === wrapper;
+  }
+
   override render(): TemplateResult {
     const hasHeading = this.slotPresence.has('heading') || (this.heading ?? '').length > 0;
     const hasDescription = this.slotPresence.has('description') || (this.description ?? '').length > 0;
-    const headingLevel = resolveHeadingLevel(this.headingLevel);
+    this.slottedHeadingSemantics = this.headingSlotHasSemantics();
+    // A slotted heading element owns the semantics; wrapping it in a second heading would nest them.
+    const headingLevel = this.slottedHeadingSemantics ? undefined : resolveHeadingLevel(this.headingLevel);
     return html`
       <div part="base">
         ${renderInertPresentation(html`<slot></slot>`, {
           part: 'icon',
           hidden: !this.slotPresence.has(),
         })}
-        <p
+        <div
           part="heading"
           role=${headingLevel ? 'heading' : nothing}
           aria-level=${headingLevel ?? nothing}
           ?hidden=${!hasHeading}
         >
-          <slot name="heading">${this.heading}</slot>
-        </p>
+          <slot name="heading" @slotchange=${this.onHeadingSlotChange}>${this.heading}</slot>
+        </div>
         <p part="description" ?hidden=${!hasDescription}>
           <slot name="description">${this.description}</slot>
         </p>
@@ -223,6 +274,12 @@ export class LyraEmpty extends LyraElement {
       </div>
     `;
   }
+}
+
+/** Whether a slotted element carries its own heading semantics. */
+function hasHeadingSemantics(element: Element): boolean {
+  if (/^h[1-6]$/.test(element.localName)) return true;
+  return (element.getAttribute('role') ?? '').trim().split(/\s+/)[0]?.toLowerCase() === 'heading';
 }
 
 declare global {

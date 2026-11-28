@@ -39,10 +39,19 @@ later values restore the corresponding content.
   use. Set it where the empty state replaces a result set the user just asked for; leave it unset
   for an empty state that is part of the page being loaded. See the first "Known gotchas" bullet
 
+**Methods:** `focusHeading(options?: FocusOptions): boolean` — moves focus to the rendered heading,
+for a router or view swap that focuses the new screen's heading. A slotted heading element (`h1`–`h6`
+or `role="heading"`) is focused itself, gaining `tabindex="-1"` only when it has no `tabindex` and
+is not natively focusable; otherwise the shadow `heading` part is focused (it keeps the
+`tabindex="-1"` it gains, stays out of Tab order, and paints no outline). Returns `false`, moving no
+focus, when no heading is rendered or focus cannot land.
+
 **Events:** none.
 
 **Slots:** default (icon/illustration), `heading` (rich heading content, overrides the `heading`
-attribute), `description` (rich description content, overrides the `description` attribute),
+attribute; a slotted `h1`–`h6` or `role="heading"` element owns the semantics, so the neutral
+`<div part="heading">` wrapper drops its own heading role instead of nesting one heading in
+another), `description` (rich description content, overrides the `description` attribute),
 `actions` (buttons/links below the description)
 
 **CSS parts:** `base`, `icon`, `heading`, `description`, `actions`

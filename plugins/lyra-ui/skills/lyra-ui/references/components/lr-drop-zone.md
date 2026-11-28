@@ -79,8 +79,8 @@ reimplemented.
 
 Every completed selection announces its outcome (unless `without-announcements`), including
 consecutive selections of the same count.
-The `fileInputAcceptedOne` / `fileInputAcceptedMany` and `fileInputRejectedOne` / `fileInputRejectedMany`
-messages accept localized plural forms selected with the numeric count.
+The `fileInputAccepted` and `fileInputRejected` messages are plural messages (`one` / `other`
+forms) selected with the numeric count.
 
 **Events:** `lr-files` (`detail: LyraDropZoneFilesDetail`, with fresh frozen readonly `files` and
 `rejected` arrays and frozen rejected-file records, plus `remainingFiles`/`remainingTotalSize`

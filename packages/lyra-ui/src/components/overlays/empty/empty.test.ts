@@ -1016,3 +1016,138 @@ it('applies heading and description typography tokens at every density, with uns
   await el.updateComplete;
   expect(read()).to.deep.equal(defaults);
 });
+
+describe('focusHeading() and the heading wrapper element', () => {
+  const headingWrapper = (el: LyraEmpty): HTMLElement =>
+    el.shadowRoot!.querySelector<HTMLElement>('[part="heading"]')!;
+
+  it('focuses the rendered property heading without showing a ring', async () => {
+    const el = (await fixture(html`<lr-empty heading="No results"></lr-empty>`)) as LyraEmpty;
+    const wrapper = headingWrapper(el);
+    expect(wrapper.hasAttribute('tabindex')).to.equal(false);
+    expect(el.focusHeading()).to.equal(true);
+    expect(document.activeElement === el, 'host is the document active element').to.equal(true);
+    expect(el.shadowRoot!.activeElement === wrapper, 'shadow heading holds focus').to.equal(true);
+    expect(wrapper.getAttribute('tabindex')).to.equal('-1');
+    expect(wrapper.tabIndex).to.equal(-1);
+    expect(getComputedStyle(wrapper).outlineStyle).to.equal('none');
+    // The tab stop stays out of sequential navigation, and a re-render keeps it.
+    el.heading = 'Still nothing';
+    await el.updateComplete;
+    expect(wrapper.getAttribute('tabindex')).to.equal('-1');
+  });
+
+  it('focuses a slotted heading element, adding tabindex="-1" only when it has none', async () => {
+    const el = (await fixture(html`
+      <lr-empty heading="Fallback"><h1 slot="heading">No results</h1></lr-empty>
+    `)) as LyraEmpty;
+    const h1 = el.querySelector('h1')!;
+    expect(el.focusHeading()).to.equal(true);
+    expect(document.activeElement === h1, 'slotted h1 holds focus').to.equal(true);
+    expect(h1.getAttribute('tabindex')).to.equal('-1');
+
+    const own = (await fixture(html`
+      <lr-empty><h2 slot="heading" tabindex="0">Own stop</h2></lr-empty>
+    `)) as LyraEmpty;
+    const h2 = own.querySelector('h2')!;
+    expect(own.focusHeading({ preventScroll: true })).to.equal(true);
+    expect(document.activeElement === h2, 'slotted h2 holds focus').to.equal(true);
+    expect(h2.getAttribute('tabindex')).to.equal('0');
+  });
+
+  it('focuses the semantic shadow wrapper for slotted non-heading rich content', async () => {
+    const el = (await fixture(html`
+      <lr-empty><span slot="heading">No <em>matching</em> results</span></lr-empty>
+    `)) as LyraEmpty;
+    const wrapper = headingWrapper(el);
+    expect(el.focusHeading()).to.equal(true);
+    expect(el.shadowRoot!.activeElement === wrapper, 'shadow heading holds focus').to.equal(true);
+    expect(el.querySelector('span')!.hasAttribute('tabindex')).to.equal(false);
+  });
+
+  it('returns false and moves no focus when there is no heading', async () => {
+    const el = (await fixture(html`<lr-empty description="Only copy"></lr-empty>`)) as LyraEmpty;
+    const before = document.activeElement;
+    expect(el.focusHeading()).to.equal(false);
+    expect(document.activeElement === before, 'focus unchanged').to.equal(true);
+    expect(headingWrapper(el).hasAttribute('tabindex')).to.equal(false);
+  });
+
+  it('keeps the default heading wrapper semantics and layout unchanged', async () => {
+    const el = (await fixture(html`<lr-empty heading="No results"></lr-empty>`)) as LyraEmpty;
+    const wrapper = headingWrapper(el);
+    expect(wrapper.getAttribute('role')).to.equal('heading');
+    expect(wrapper.getAttribute('aria-level')).to.equal('3');
+    expect(wrapper.hasAttribute('tabindex')).to.equal(false);
+    const style = getComputedStyle(wrapper);
+    const hostStyle = getComputedStyle(el);
+    expect(style.display).to.equal('block');
+    expect(style.marginBlockStart).to.equal('0px');
+    expect(style.marginBlockEnd).to.equal('0px');
+    expect(style.marginInlineStart).to.equal('0px');
+    expect(style.fontWeight).to.equal('600');
+    expect(style.fontSize).to.equal(hostStyle.fontSize);
+    expect(style.lineHeight).to.equal(hostStyle.lineHeight);
+  });
+
+  it('renders a neutral non-paragraph wrapper for heading-level="none"', async () => {
+    const el = (await fixture(
+      html`<lr-empty heading="Visual label" heading-level="none"></lr-empty>`,
+    )) as LyraEmpty;
+    const wrapper = headingWrapper(el);
+    expect(wrapper.localName).to.not.equal('p');
+    expect(wrapper.hasAttribute('role')).to.equal(false);
+    expect(wrapper.hasAttribute('aria-level')).to.equal(false);
+    expect(getComputedStyle(wrapper).marginBlockStart).to.equal('0px');
+    await expect(el).to.be.accessible();
+  });
+
+  it('drops wrapper heading semantics when the heading slot holds a heading element', async () => {
+    const el = (await fixture(html`
+      <lr-empty heading-level="2"><h1 slot="heading">No results</h1></lr-empty>
+    `)) as LyraEmpty;
+    const wrapper = headingWrapper(el);
+    expect(wrapper.localName).to.not.equal('p');
+    expect(wrapper.hasAttribute('role')).to.equal(false);
+    expect(wrapper.hasAttribute('aria-level')).to.equal(false);
+    expect(wrapper.closest('p') === null, 'no paragraph ancestor').to.equal(true);
+    await expect(el).to.be.accessible();
+
+    const roleHeading = (await fixture(html`
+      <lr-empty><div slot="heading" role="heading" aria-level="2">No results</div></lr-empty>
+    `)) as LyraEmpty;
+    expect(headingWrapper(roleHeading).hasAttribute('role')).to.equal(false);
+  });
+
+  it('re-derives wrapper semantics when the slotted heading content is swapped', async () => {
+    const el = (await fixture(html`
+      <lr-empty><span slot="heading">Plain</span></lr-empty>
+    `)) as LyraEmpty;
+    const wrapper = headingWrapper(el);
+    expect(wrapper.getAttribute('role')).to.equal('heading');
+    el.querySelector('span')!.remove();
+    const h1 = document.createElement('h1');
+    h1.slot = 'heading';
+    h1.textContent = 'Real heading';
+    el.append(h1);
+    await waitUntil(() => !wrapper.hasAttribute('role'), 'wrapper role dropped for the slotted h1');
+    h1.remove();
+    const span = document.createElement('span');
+    span.slot = 'heading';
+    span.textContent = 'Plain again';
+    el.append(span);
+    await waitUntil(() => wrapper.getAttribute('role') === 'heading', 'wrapper role restored');
+    expect(wrapper.getAttribute('aria-level')).to.equal('3');
+  });
+
+  it('flattens a forwarded heading slot when deriving wrapper semantics', async () => {
+    const outer = (await fixture(html`
+      <empty-heading-description-forward-wrapper><h2 slot="heading">Forwarded</h2></empty-heading-description-forward-wrapper>
+    `)) as HTMLElement;
+    const el = outer.shadowRoot!.querySelector('lr-empty') as LyraEmpty;
+    await el.updateComplete;
+    await waitUntil(() => !headingWrapper(el).hasAttribute('role'), 'forwarded h2 drops wrapper role');
+    expect(el.focusHeading()).to.equal(true);
+    expect(document.activeElement === outer.querySelector('h2'), 'forwarded h2 holds focus').to.equal(true);
+  });
+});

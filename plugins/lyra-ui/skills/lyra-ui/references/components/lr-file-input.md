@@ -155,11 +155,11 @@ The shared file-intake event detail and rejection types are available as type-on
   is anchored; assign `undefined` to restore the default focusable base
 - `acceptedMessage?: string` (attribute `accepted-message`) — live-region message after an
   accepted selection; `{count}` is replaced with the accepted count. Absence uses the localized
-  singular/plural `fileInputAcceptedOne`/`fileInputAcceptedMany` default. Every explicit string,
+  plural `fileInputAccepted` default. Every explicit string,
   including empty and the former `'{count} file(s) added.'` English default, wins verbatim.
 - `rejectedMessage?: string` (attribute `rejected-message`) — live-region message after rejected
-  files; `{count}` is replaced with the rejected count. Absence uses the localized singular/plural
-  `fileInputRejectedOne`/`fileInputRejectedMany` default. Every explicit string, including empty
+  files; `{count}` is replaced with the rejected count. Absence uses the localized plural
+  `fileInputRejected` default. Every explicit string, including empty
   and the former `'{count} file(s) rejected.'` English default, wins verbatim.
 
 **Methods:** `openPicker()` programmatically opens the native file dialog; `focus(options?)`,
@@ -169,8 +169,8 @@ The shared file-intake event detail and rejection types are available as type-on
 `required` validity.
 
 Every completed selection announces its outcome, including consecutive selections of the same count.
-The `fileInputAcceptedOne` / `fileInputAcceptedMany` and `fileInputRejectedOne` / `fileInputRejectedMany`
-messages accept localized plural forms selected with the numeric count.
+The `fileInputAccepted` and `fileInputRejected` messages are plural messages (`one` / `other`
+forms) selected with the numeric count.
 
 **Events:** a user selection or removal emits native bubbling/composed `input`, `lr-input`,
 native `change`, then `lr-change`; the typed pair carries `{ value: readonly File[] }` with a frozen

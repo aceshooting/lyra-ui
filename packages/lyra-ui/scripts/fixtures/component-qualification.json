@@ -22259,6 +22259,12 @@
             },
             {
               "file": "src/components/overlays/empty/empty.test.ts",
+              "test": "drops wrapper heading semantics when the heading slot holds a heading element",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/overlays/empty/empty.test.ts",
               "test": "gives property and rich-slot headings the configured semantic level with a none opt-out",
               "target": "richHeading",
               "state": "populated"
@@ -22266,6 +22272,12 @@
             {
               "file": "src/components/overlays/empty/empty.test.ts",
               "test": "is accessible",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/overlays/empty/empty.test.ts",
+              "test": "renders a neutral non-paragraph wrapper for heading-level=\"none\"",
               "target": "el",
               "state": "populated"
             }
@@ -22354,7 +22366,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/empty/empty.class.ts",
-              "line": 140,
+              "line": 147,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
