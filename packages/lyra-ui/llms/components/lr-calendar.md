@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 20 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 21 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -22,16 +22,23 @@ Early ISO dates such as `0001`, `0099`, and `0100` retain their authored local y
 grid and month navigation. Navigation stays within ISO years `0000` through `9999`; slots outside
 that range are blank and unavailable. Month headings, day labels, and agenda dates use the
 Gregorian calendar with the active locale's formatting. Valid colored agenda actions preserve their foreground/background pairing
-through hover and press, with the existing state tokens remaining overridable. Arbitrary caller
-colors still require the caller to choose an accessible contrast pair.
+through hover and press, with the existing state tokens remaining overridable.
+
+Event text color: an event's `textColor` wins; otherwise an event with a `color` gets a foreground
+derived from its resolved fill in the live theme (`--lr-color-on-brand` or `--lr-color-text` when
+either reaches 4.5:1, else white or black, whichever contrasts more; a translucent fill is judged over
+`--lr-color-surface`). Theme attribute and color-scheme changes re-derive it automatically; call
+`refreshTheme()` after changing tokens another way. Events with neither field keep the month-view
+`--lr-calendar-event-bg`/`--lr-calendar-event-color` pairing.
 
 **Properties:**
 
 - `events: CalendarEvent[] = []` (attribute: false) — `{ readonly id?, readonly date, readonly
-title, readonly color?, readonly data? }`; `date` accepts an ISO `YYYY-MM-DD` string, finite epoch
+title, readonly color?, readonly textColor?, readonly data? }`; `date` accepts an ISO `YYYY-MM-DD` string, finite epoch
   milliseconds, or a valid `Date`, then normalizes to the displayed ISO day. Invalid date/title rows
   are omitted; `lr-event-select.detail.event` remains the original admitted object. `color` is
-  sanitized before use as the marker background. The former ignored `start`/`end` fields are not
+  sanitized before use as the marker background; `textColor` is sanitized before use as its text
+  color. The former ignored `start`/`end` fields are not
   part of the contract; use one event per displayed date. Input retains the first 10,000 events
   while preserving event identity. A localized `limit` part discloses omitted input in month and
   agenda views; provide a smaller date range to include other events. Changed loss notices are
@@ -54,6 +61,18 @@ title, readonly color?, readonly data? }`; `date` accepts an ISO `YYYY-MM-DD` st
 - `accessibleLabel: string = ''` (attribute `aria-label`) — names the nested calendar section,
   whether authored as the host attribute or set programmatically; unset, the section keeps the
   localized purpose name
+- `dayContent?: LyraCalendarDayContent` (JS only, default unset) —
+  `(date: Date, context: LyraCalendarDayContext) => unknown`, where `context` is
+  `{ date (ISO), outside, today, selected, events }` (`events` holds every caller event on that
+  day). The result renders in a `day-content` part under each month-view day number; `null`,
+  `undefined`, `''` or a throwing renderer renders nothing for that day. The cell keeps its
+  full-date accessible name and references the content through `aria-describedby`. Clicking the
+  content selects the day unless the click lands on an interactive descendant or calls
+  `preventDefault()`; keep the content non-interactive, since arrow keys move between cells. Agenda
+  view has no day cells and ignores it. Mirrors the `dayContent` name of `lr-date-picker`, whose
+  renderer replaces the day number instead of adding under it.
+
+**Methods:** `refreshTheme()` re-derives colored events' text colors from the live theme.
 
 At most 4 events render as `event` buttons inside a single month-view day cell, and at most 500
 events render as `agenda-event` buttons in agenda view; either ceiling past that count renders a
@@ -93,14 +112,17 @@ the day), Home/End to the month's first/last day; stepping past the rendered gri
 **CSS parts:** `header` and `navigation` are aliases on the header wrapper; `nav` is shared by both
 month-navigation buttons; `previous-button` and `next-button` identify each direct button;
 `nav-glyph` is the chevron (`scaleX(-1)`-mirrored under RTL); `title`, `weekdays`, `weekday`,
-`grid`, `week` (`display: contents`), `day`, `date`, `event` (a month-view marker), `event-limit`
+`grid`, `week` (`display: contents`), `day`, `date`, `day-content` (`dayContent` output under the
+day number), `event` (a month-view marker), `event-limit`
 (localized "+N more" notice shown in a day cell whose events exceed the 4-event per-cell render
 ceiling), `agenda`, `agenda-event`, `agenda-limit` (localized "+N more" notice shown in agenda
 view when the visible month's events exceed the 500-event render ceiling), `limit` (input-admission
 notice), and `empty` (the agenda
 view's localized "no events" message).
 
-**Themeable custom properties:** `--lr-calendar-event-hover-tint` overlays a month-view event fill on hover.
+**Themeable custom properties:** `--lr-calendar-event-bg` (default `var(--lr-color-brand)`) and
+`--lr-calendar-event-color` (default `var(--lr-color-on-brand)`) paint month-view events without a
+`color` (and without a `textColor`, for the text). `--lr-calendar-event-hover-tint` overlays a month-view event fill on hover.
 `--lr-calendar-day-min-block-size` (default `var(--lr-size-6rem)`)
 and `--lr-calendar-day-min-block-size-narrow` (default `var(--lr-size-4rem)`, applied at container inline-size
 ≤ 28rem); `--lr-calendar-day-selected-bg` (default `var(--lr-color-brand-quiet)`) for a selected

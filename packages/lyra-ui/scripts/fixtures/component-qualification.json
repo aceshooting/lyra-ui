@@ -7590,6 +7590,24 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/data/calendar/calendar-custom-content.test.ts",
+              "test": "is accessible with day content",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/data/calendar/calendar-custom-content.test.ts",
+              "test": "is accessible with light custom event fills in both views",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/data/calendar/calendar-custom-content.test.ts",
+              "test": "is accessible with light custom event fills in both views",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/data/calendar/calendar.test.ts",
               "test": "is accessible with a populated agenda view",
               "target": "el",
@@ -7609,8 +7627,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/calendar/calendar-remediation.test.ts",
-              "test": "moves the day focus by month with PageUp/PageDown and to the month edges with Home/End",
+              "file": "src/components/data/calendar/calendar-custom-content.test.ts",
+              "test": "keeps arrow-key grid navigation (mirrored under RTL) with content present",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -7620,8 +7638,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/calendar/calendar.test.ts",
-              "test": "mirrors the previous/next chevron glyphs under RTL",
+              "file": "src/components/data/calendar/calendar-custom-content.test.ts",
+              "test": "keeps arrow-key grid navigation (mirrored under RTL) with content present",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -7731,6 +7749,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/data/calendar/calendar-custom-content.test.ts",
           "src/components/data/calendar/calendar-event-dates.test.ts",
           "src/components/data/calendar/calendar-remediation-b09.test.ts",
           "src/components/data/calendar/calendar-remediation.test.ts",
@@ -23761,7 +23780,7 @@
           "evidence": [
             {
               "file": "src/components/utility/export-button/export-button.class.ts",
-              "line": 875,
+              "line": 916,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -57898,6 +57917,12 @@
               "state": "populated"
             },
             {
+              "file": "src/components/data/table/table-group-footer.test.ts",
+              "test": "exposes a localized total row that passes axe in ${direction}",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/data/table/table-layout.test.ts",
               "test": "is accessible with cell titles rendered",
               "target": "el",
@@ -58173,6 +58198,7 @@
           "src/components/data/table/table-editing.test.ts",
           "src/components/data/table/table-expansion.test.ts",
           "src/components/data/table/table-filter-work.test.ts",
+          "src/components/data/table/table-group-footer.test.ts",
           "src/components/data/table/table-hostile-columns.test.ts",
           "src/components/data/table/table-interaction-edges.test.ts",
           "src/components/data/table/table-layout.test.ts",

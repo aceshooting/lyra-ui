@@ -19658,6 +19658,15 @@
             "default": ""
           },
           {
+            "name": "dayContent",
+            "attribute": null,
+            "type": "LyraCalendarDayContent | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "events",
             "attribute": null,
             "type": "readonly CalendarEvent[]",
@@ -19757,6 +19766,10 @@
           },
           {
             "name": "day",
+            "deprecated": null
+          },
+          {
+            "name": "day-content",
             "deprecated": null
           },
           {
@@ -19882,6 +19895,18 @@
             "default": "var(--lr-color-brand)"
           },
           {
+            "name": "--lr-calendar-event-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-calendar-event-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-on-brand)"
+          },
+          {
             "name": "--lr-calendar-event-hover-tint",
             "deprecated": null,
             "hasDefault": false
@@ -19900,7 +19925,17 @@
           }
         ],
         "cssStates": [],
-        "methods": [],
+        "methods": [
+          {
+            "name": "refreshTheme",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          }
+        ],
         "staticProperties": [],
         "staticMethods": [],
         "moduleExports": [],
@@ -22140,6 +22175,15 @@
             "name": "marker",
             "attribute": "marker",
             "type": "number | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "valueFormatter",
+            "attribute": null,
+            "type": "LyraCategoryBarValueFormatter | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -66000,6 +66044,16 @@
             "default": false
           },
           {
+            "name": "delimiter",
+            "property": "delimiter",
+            "type": "LyraExportDelimiter",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ","
+          },
+          {
             "name": "disabled",
             "property": "disabled",
             "type": "boolean",
@@ -66037,6 +66091,16 @@
             "inferred": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "line-ending",
+            "property": "lineEnding",
+            "type": "LyraExportLineEnding",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "\\r\\n"
           },
           {
             "name": "loading",
@@ -66128,6 +66192,16 @@
             "hasDefault": false
           },
           {
+            "name": "delimiter",
+            "attribute": "delimiter",
+            "type": "LyraExportDelimiter",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ","
+          },
+          {
             "name": "disabled",
             "attribute": "disabled",
             "type": "boolean",
@@ -66183,6 +66257,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "lineEnding",
+            "attribute": "line-ending",
+            "type": "LyraExportLineEnding",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "\\r\\n"
           },
           {
             "name": "loading",
@@ -156034,6 +156118,15 @@
             "hasDefault": false
           },
           {
+            "name": "groupFooter",
+            "attribute": null,
+            "type": "TableGroupFooter<T> | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "groupLabel",
             "attribute": null,
             "type": "(key: string | number, rows: readonly T[]) => unknown | undefined",
@@ -156706,6 +156799,14 @@
           },
           {
             "name": "group-cell",
+            "deprecated": null
+          },
+          {
+            "name": "group-footer",
+            "deprecated": null
+          },
+          {
+            "name": "group-footer-cell",
             "deprecated": null
           },
           {

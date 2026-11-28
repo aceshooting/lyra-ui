@@ -2101,6 +2101,7 @@ export interface LyraComponentTypeMap {
     properties: LyraElementProperties<
       LyraCalendar,
       | 'accessibleLabel'
+      | 'dayContent'
       | 'events'
       | 'firstDayOfWeek'
       | 'locale'
@@ -2124,6 +2125,8 @@ export interface LyraComponentTypeMap {
       | '--lr-calendar-day-outside-color'
       | '--lr-calendar-day-selected-bg'
       | '--lr-calendar-day-today-outline-color'
+      | '--lr-calendar-event-bg'
+      | '--lr-calendar-event-color'
       | '--lr-calendar-event-hover-tint'
       | '--lr-calendar-nav-active-bg'
       | '--lr-calendar-nav-hover-bg';
@@ -2324,6 +2327,7 @@ export interface LyraComponentTypeMap {
       | 'locale'
       | 'marker'
       | 'strings'
+      | 'valueFormatter'
       | 'values'
       | 'variants'
       | 'withLabels',
@@ -6207,12 +6211,14 @@ export interface LyraComponentTypeMap {
       | 'appearance'
       | 'bom'
       | 'columns'
+      | 'delimiter'
       | 'disabled'
       | 'filename'
       | 'formats'
       | 'getRows'
       | 'iconOnly'
       | 'label'
+      | 'lineEnding'
       | 'loading'
       | 'locale'
       | 'open'
@@ -6254,6 +6260,7 @@ export interface LyraComponentTypeMap {
     attributeAliases: {
       'aria-label'?: LyraExportButton['accessibleLabel'];
       'icon-only'?: LyraExportButton['iconOnly'];
+      'line-ending'?: LyraExportButton['lineEnding'];
       'top-layer'?: LyraExportButton['topLayer'];
     };
   };
@@ -14321,6 +14328,7 @@ export interface LyraComponentTypeMap {
       | 'filterText'
       | 'grandTotal'
       | 'groupBy'
+      | 'groupFooter'
       | 'groupLabel'
       | 'hasHiddenPriorityColumns'
       | 'hasMore'
