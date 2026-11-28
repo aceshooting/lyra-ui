@@ -6,12 +6,16 @@ export interface ReorderOwnerState {
   readonly pending: boolean;
   readonly busy: boolean;
   readonly validIdentity: boolean;
+  /** No unlocked valid item precedes this one, so a move up has no target. */
+  readonly upBlocked: boolean;
+  /** No unlocked valid item follows this one, so a move down has no target. */
+  readonly downBlocked: boolean;
 }
 
 /** @internal Private owner-to-item state bridge. */
 export const reorderOwnerUpdate = Symbol('lyra-reorder-owner-update');
 
-/** @internal Private item-to-owner identity notification. */
+/** @internal Private item-to-owner identity or `locked` change notification. */
 export const reorderIdentityChange = Symbol('lyra-reorder-identity-change');
 
 /** @internal */

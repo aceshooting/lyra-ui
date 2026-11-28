@@ -46,6 +46,26 @@ export const Boundaries: StoryObj = {
   `,
 };
 
+export const LockedRows: StoryObj = {
+  name: 'Locked rows',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A locked row keeps its index and renders no move controls. Other rows skip over it, so moving Email up swaps it with Name and leaves Created in place.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-reorder-list label="Columns" style="display:flex; flex-direction:column; gap:var(--lr-space-2xs);">
+      <lr-reorder-item value="id" locked>ID (fixed)</lr-reorder-item>
+      <lr-reorder-item value="name">Name</lr-reorder-item>
+      <lr-reorder-item value="created" locked>Created (fixed)</lr-reorder-item>
+      <lr-reorder-item value="email">Email</lr-reorder-item>
+    </lr-reorder-list>
+  `,
+};
+
 export const NarrowLongContent: StoryObj = {
   name: 'Narrow long content LTR/RTL (320px)',
   parameters: {

@@ -55,6 +55,21 @@ type ReorderFocusTarget = {
  *  deeper still. Climbs shadow-root boundaries via `.host` links rather than comparing a single
  *  `getRootNode()` result, since a native `<button>` focused inside `<lr-icon-button>`'s OWN
  *  shadow root has a root node that is neither `item.shadowRoot` nor the document. */
+/** Index of the nearest unlocked item from `fromIndex` in `direction`, or `-1` when only locked
+ *  items (or the list's end) lie that way. Locked items keep their index, so a move swaps with
+ *  this target, leaving any locked items between the two in place. */
+function moveTargetIndex(
+  items: readonly LyraReorderItem[],
+  fromIndex: number,
+  direction: 'up' | 'down',
+): number {
+  const step = direction === 'up' ? -1 : 1;
+  for (let i = fromIndex + step; i >= 0 && i < items.length; i += step) {
+    if (!items[i]!.locked) return i;
+  }
+  return -1;
+}
+
 function isRowOwnChrome(node: Element, item: LyraReorderItem): boolean {
   let root: Node = node.getRootNode();
   while (isShadowRoot(root)) {
@@ -88,7 +103,8 @@ type ReorderReconciliation = {
  * order genuinely is the source of truth (the same principle `<lr-tree>` relies on for its own
  * children). Setting `controlled` opts into the `<lr-tree>`-style contract instead — see its own
  * doc comment. Every item must provide a unique, nonempty `value`; invalid or duplicate identities
- * stay visible but cannot move. The `lr-reorder-request` event tells the host the resulting
+ * stay visible but cannot move. A `locked` item keeps its index: it has no move controls, and other
+ * items moving past it swap with the nearest unlocked item, skipping over every locked one. The `lr-reorder-request` event tells the host the resulting
  * stable-id order, so it can persist it without hand-rolling its own splice/resort logic.
  *
  * An `lr-reorder-request` listener can call `preventDefault()` to hold a move open while its own
@@ -171,7 +187,7 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
   private pendingFocusTarget: ReorderFocusTarget | null = null;
 
   private focusRestoreGeneration = 0;
-  private boundarySnapshot: readonly (readonly [LyraReorderItem, string])[] = [];
+  private boundarySnapshot: readonly (readonly [LyraReorderItem, string, boolean])[] = [];
   private stateItems = new Set<LyraReorderItem>();
   private moveToken = 0;
 
@@ -217,6 +233,9 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
     const directItems = this.directItemElements;
     const items = this.itemElements;
     const indexOf = new Map(items.map((item, index) => [item, index]));
+    const firstUnlocked = items.findIndex((item) => !item.locked);
+    let lastUnlocked = items.length - 1;
+    while (lastUnlocked >= 0 && items[lastUnlocked]!.locked) lastUnlocked -= 1;
     const heldMove = this.pendingMove?.phase === 'held';
     const reconciliation = this.pendingReconciliation;
     const busy = heldMove || reconciliation !== null;
@@ -235,10 +254,12 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
           (reconciliation !== null && item.value === reconciliation.value),
         busy,
         validIdentity: indexOf.has(item),
+        upBlocked: i >= 0 && (firstUnlocked < 0 || firstUnlocked >= i),
+        downBlocked: i >= 0 && lastUnlocked <= i,
       });
     });
     this.stateItems = nextStateItems;
-    this.boundarySnapshot = directItems.map(item => [item, item.value] as const);
+    this.boundarySnapshot = directItems.map(item => [item, item.value, item.locked] as const);
     this.requestUpdate();
   }
 
@@ -248,7 +269,8 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
     if (this.pendingReconciliation) this.tryCompleteControlledReconciliation();
     const current = this.directItemElements;
     if (current.length !== this.boundarySnapshot.length || current.some((item, index) =>
-      item !== this.boundarySnapshot[index]?.[0] || item.value !== this.boundarySnapshot[index]?.[1])) this.syncBoundaryState();
+      item !== this.boundarySnapshot[index]?.[0] || item.value !== this.boundarySnapshot[index]?.[1] ||
+      item.locked !== this.boundarySnapshot[index]?.[2])) this.syncBoundaryState();
   };
 
   /** Checks whether the current light-DOM order now matches a controlled move's expected value
@@ -295,6 +317,8 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
       !this.disabled &&
       !this.pendingMove.item.disabled &&
       !this.pendingMove.target.disabled &&
+      !this.pendingMove.item.locked &&
+      !this.pendingMove.target.locked &&
       current.length === this.pendingMove.members.length &&
       current.every(
         (item, index) =>
@@ -395,13 +419,19 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
   private applyMove(
     item: LyraReorderItem,
     direction: 'up' | 'down',
-    _fromIndex: number,
+    fromIndex: number,
     toIndex: number
   ): void {
     const items = this.itemElements;
     // safe: callers validate toIndex ∈ [0, items.length - 1] before applyMove (see move handler)
     const target = items[toIndex]!;
-    if (direction === 'up') this.insertBefore(item, target);
+    if (Math.abs(toIndex - fromIndex) > 1) {
+      // Locked rows sit between the two: swap them so every locked row keeps its index.
+      const itemAnchor = item.nextSibling;
+      const targetAnchor = target.nextSibling;
+      this.insertBefore(item, targetAnchor);
+      this.insertBefore(target, itemAnchor);
+    } else if (direction === 'up') this.insertBefore(item, target);
     else this.insertBefore(item, target.nextElementSibling);
     this.finishMove(item, direction, toIndex);
   }
@@ -414,7 +444,8 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
     // Focus the same-direction button if it's still usable after the move; otherwise the move
     // just made this item a new boundary in that direction (it would get force-blurred the
     // instant Lit's next render sets it `disabled`), so fall back to the other button instead.
-    const sameDirDisabled = direction === 'up' ? item.atStart : item.atEnd;
+    const settled = this.itemElements;
+    const sameDirDisabled = moveTargetIndex(settled, settled.indexOf(item), direction) < 0;
     const focusDirection: 'up' | 'down' = sameDirDisabled
       ? direction === 'up'
         ? 'down'
@@ -465,18 +496,19 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
   }
 
   private moveItem(item: LyraReorderItem, direction: 'up' | 'down'): void {
-    if (this.disabled || item.disabled || this.pendingMove || this.pendingReconciliation) return;
+    if (this.disabled || item.disabled || item.locked || this.pendingMove || this.pendingReconciliation) return;
     const items = this.itemElements;
     const fromIndex = items.indexOf(item);
     if (fromIndex < 0) return;
-    const toIndex = direction === 'up' ? fromIndex - 1 : fromIndex + 1;
-    if (toIndex < 0 || toIndex >= items.length) return;
+    const toIndex = moveTargetIndex(items, fromIndex, direction);
+    if (toIndex < 0) return;
 
     // Compute the order the move WOULD produce, without touching the DOM yet -- the event fires
-    // before the move so a listener can still veto it.
+    // before the move so a listener can still veto it. Swapping with the target equals the
+    // adjacent splice when nothing is locked, and leaves locked rows in between in place.
     const reordered = items.slice();
-    reordered.splice(fromIndex, 1);
-    reordered.splice(toIndex, 0, item);
+    reordered[fromIndex] = items[toIndex]!;
+    reordered[toIndex] = item;
     const expectedValues = this.orderValues(reordered);
 
     const transaction = {
@@ -621,15 +653,14 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
     if (originatedInNestedControl) return;
     const items = this.itemElements;
     const fromIndex = items.indexOf(item);
-    const toIndex = e.key === 'ArrowDown' ? fromIndex + 1 : fromIndex - 1;
     if (
       this.disabled ||
       this.pendingMove ||
       this.pendingReconciliation ||
       item.disabled ||
+      item.locked ||
       fromIndex < 0 ||
-      toIndex < 0 ||
-      toIndex >= items.length
+      moveTargetIndex(items, fromIndex, e.key === 'ArrowDown' ? 'down' : 'up') < 0
     ) return;
     e.preventDefault();
     this.moveItem(item, e.key === 'ArrowDown' ? 'down' : 'up');

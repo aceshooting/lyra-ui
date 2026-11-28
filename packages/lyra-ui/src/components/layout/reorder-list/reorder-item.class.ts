@@ -27,14 +27,16 @@ function isReorderOwnerState(value: unknown): value is ReorderOwnerState {
     typeof candidate.listDisabled === 'boolean' &&
     typeof candidate.pending === 'boolean' &&
     typeof candidate.busy === 'boolean' &&
-    typeof candidate.validIdentity === 'boolean'
+    typeof candidate.validIdentity === 'boolean' &&
+    typeof candidate.upBlocked === 'boolean' &&
+    typeof candidate.downBlocked === 'boolean'
   );
 }
 
 /**
  * `<lr-reorder-item>` — one row inside `<lr-reorder-list>`. Renders arbitrary slotted content plus
- * move-up/move-down buttons. This item alone doesn't know whether it's first or last in the list,
- * so its readonly boundary-disabled state (`atStart`/`atEnd`), list-level cascade
+ * move-up/move-down buttons (none while `locked`). This item alone doesn't know whether it's first
+ * or last in the list, so its readonly boundary-disabled state (`atStart`/`atEnd`), list-level cascade
  * (`listDisabled`), and held-move state (`pending`) are resolved by the owning
  * `<lr-reorder-list>`. `focusMoveButton()` moves focus onto one of the two controls
  * programmatically -- the owning list uses it for its own post-move focus restore, and a host
@@ -98,6 +100,8 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
     pending: false,
     busy: false,
     validIdentity: false,
+    upBlocked: false,
+    downBlocked: false,
   };
   private readonly contentObserver = new OwnedMutationObserver(this, () => {
     this.contentLabel = undefined;
@@ -118,6 +122,15 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
   /** Disables this row's own move-up/move-down buttons without removing it or its slotted content
    *  from the DOM. Does not gate the default slot's own content. */
   @property({ type: Boolean, reflect: true }) disabled = false;
+
+  /** Pins this row at its current index. Default `false`. A locked row renders no
+   *  move-up/move-down controls (the row itself stays enabled, focusable and announced normally,
+   *  unlike `disabled`), ignores the Ctrl/Cmd+Arrow shortcut, and is never a move target: an
+   *  unlocked row moving up or down skips over any locked rows and swaps with the nearest
+   *  unlocked row in that direction, so every locked row keeps its index. A neighbour whose only
+   *  remaining target in a direction is locked gets that move control disabled. `atStart`/`atEnd`
+   *  stay positional. Toggling it refreshes the owning list's move availability. */
+  @property({ type: Boolean, reflect: true }) locked = false;
 
   /** Whether this is the first valid item in the owning list. Readonly. */
   get atStart(): boolean {
@@ -153,6 +166,8 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
           pending: false,
           busy: false,
           validIdentity: false,
+          upBlocked: false,
+          downBlocked: false,
         });
       }
       return;
@@ -169,7 +184,9 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
       previous.listDisabled === state.listDisabled &&
       previous.pending === state.pending &&
       previous.busy === state.busy &&
-      previous.validIdentity === state.validIdentity
+      previous.validIdentity === state.validIdentity &&
+      previous.upBlocked === state.upBlocked &&
+      previous.downBlocked === state.downBlocked
     )
       return;
     this.ownerState = state;
@@ -195,8 +212,10 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
       this.disabled ||
       this.listDisabled ||
       this.ownerState.busy ||
+      this.locked ||
       !hasValidIdentity ||
-      this.atStart
+      this.atStart ||
+      this.ownerState.upBlocked
     );
   }
 
@@ -209,16 +228,19 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
       this.disabled ||
       this.listDisabled ||
       this.ownerState.busy ||
+      this.locked ||
       !hasValidIdentity ||
-      this.atEnd
+      this.atEnd ||
+      this.ownerState.downBlocked
     );
   }
 
   /** Moves focus to this row's move-up or move-down control, mirroring the owning list's own
    *  post-move focus restore. No-ops (returning `false`) when that control is disabled for any
-   *  reason -- this item's own `disabled`, the owning list's `listDisabled`, a move held or a
-   *  controlled reconciliation pending anywhere in the list (`busy`), an invalid identity, or the
-   *  requested direction already being this item's boundary. Returns whether focus moved. The
+   *  reason -- this item's own `disabled` or `locked`, the owning list's `listDisabled`, a move
+   *  held or a controlled reconciliation pending anywhere in the list (`busy`), an invalid
+   *  identity, or the requested direction already being this item's boundary or offering only
+   *  locked rows. Returns whether focus moved. The
    *  move controls are composed `<lr-icon-button>`s, which expose `disabled` and `focus()` but are
    *  not `HTMLButtonElement`s; read both structurally. */
   focusMoveButton(direction: 'up' | 'down'): boolean {
@@ -298,13 +320,18 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (changed.has('hostAccessibleLabel')) this.refreshContentObserver();
-    if (changed.has('value')) {
+    if (changed.has('value') || changed.has('locked')) {
       (this.owner as Partial<ReorderIdentityOwner> | null)?.[reorderIdentityChange]?.(this);
     }
     if (this.getAttribute('role') !== 'listitem') this.setAttribute('role', 'listitem');
   }
 
   override render(): TemplateResult {
+    if (this.locked) {
+      return html`<div part="base">
+        <span part="content"><slot @slotchange=${this.onContentSlotChange}></slot></span>
+      </div>`;
+    }
     const itemLabel = this.resolvedItemLabel;
     return html`
       <div part="base">

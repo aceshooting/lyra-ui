@@ -1920,6 +1920,24 @@ controls; making it invalid disables them. Identity edits do not emit a reorder 
 value attribute from a standalone item renders it as absent while preserving `null` readback; an
 explicit empty string remains supplied and later valid values recover.
 
+A `locked` item pins its row at its index, for lists mixing editable rows with fixed ones (system
+entries, a header row). It renders no move controls, ignores Ctrl/Cmd+Arrow, and is never a move
+target, but unlike `disabled` the row stays enabled and its content stays interactive. An unlocked
+row moving up or down skips every locked row and swaps with the nearest unlocked row in that
+direction, so each locked row keeps its index; `fromIndex`/`toIndex` then differ by more than one.
+A move control whose only remaining target is locked is disabled. Locked rows still appear in the
+emitted `order`.
+
+```html
+<lr-reorder-list label="Columns">
+  <lr-reorder-item value="id" locked>ID (fixed)</lr-reorder-item>
+  <lr-reorder-item value="name">Name</lr-reorder-item>
+  <lr-reorder-item value="created" locked>Created (fixed)</lr-reorder-item>
+  <lr-reorder-item value="email">Email</lr-reorder-item>
+</lr-reorder-list>
+<!-- Moving "email" up emits order ["id", "email", "created", "name"]. -->
+```
+
 Movement boundaries reconcile once after an accepted internal move; native slot changes and item
 identity changes remain authoritative. An explicit item `aria-label` avoids content-name
 observation; otherwise the item refreshes its cached accessible name when slotted content changes.
@@ -2007,6 +2025,10 @@ When the host has no `aria-label`, the item derives a bounded accessible text pr
 row content for the repeated move-action names.
 - `disabled: boolean = false` (reflected) — disables this row's own move buttons only; does not
   hide its slotted content.
+- `locked: boolean = false` (reflected) — pins this row at its index: no move controls are
+  rendered, the row ignores Ctrl/Cmd+Arrow and is never a move target; other rows skip over it.
+  The row itself is not disabled. `atStart`/`atEnd` stay positional. Toggling it refreshes the
+  owning list's move availability.
 - `atStart: boolean`, `atEnd: boolean`, `listDisabled: boolean`, `pending: boolean` (readonly) —
   effective owner state. Corresponding custom states include `:state(at-start)`, `:state(at-end)`,
   `:state(list-disabled)`, `:state(pending)`, and `:state(busy)`.
@@ -2021,9 +2043,9 @@ while not disabled; handled by the parent `<lr-reorder-list>`, which performs th
 
 **Methods:** `focusMoveButton(direction: 'up' | 'down'): boolean` — moves focus to the requested
 move control and returns whether it did; a no-op returning `false` when that control is disabled
-for any reason (this item's own `disabled`, the owning list's `listDisabled`, a move held or a
-controlled reconciliation pending anywhere in the list, an invalid identity, or that direction
-already being this item's boundary). The owning `<lr-reorder-list>` uses it for its own post-move
+for any reason (this item's own `disabled` or `locked`, the owning list's `listDisabled`, a move
+held or a controlled reconciliation pending anywhere in the list, an invalid identity, or that
+direction already being this item's boundary or offering only locked rows). The owning `<lr-reorder-list>` uses it for its own post-move
 focus restore, including onto a freshly recreated element instance while `controlled`; a host can
 call it the same way.
 
