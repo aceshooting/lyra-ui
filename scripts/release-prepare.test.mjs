@@ -351,6 +351,7 @@ test('release preparation fetches published tags before bumping and refuses conf
       'scripts/release-artifacts.mjs',
       'scripts/check-node-version.mjs',
       'packages/lyra-ui/scripts/is-main-module.mjs',
+      'packages/lyra-ui/scripts/packed-manifest.mjs',
       '.github/release-qualification.json',
       '.nvmrc',
     ]) {
